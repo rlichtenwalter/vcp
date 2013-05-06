@@ -46,13 +46,10 @@ else
 	CPP_FLAGS := $(COMMON_FLAGS) -O3 -D NDEBUG
 endif
 
-all: $(addprefix $(BINDIR)/,$(BINS)) $(BINDIR)
+all: $(addprefix $(BINDIR)/,$(BINS)) | $(BINDIR)
 
-$(OBJDIR):
-	@- mkdir -p $(OBJDIR) 2> /dev/null || true
-
-$(BINDIR):
-	@- mkdir -p $(BINDIR) 2> /dev/null || true
+$(OBJDIR) $(BINDIR):
+	@ mkdir -p $@
 
 $(BINDIR)/%: $(OBJDIR)/%.o | $(BINDIR)
 	$(CC) $(CPP_FLAGS) $< -o $@;
@@ -62,6 +59,7 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.cpp | $(OBJDIR)
 
 -include $(DEPS)
 
+.SECONDARY: $(OBJS)
 .PHONY: all clean
 
 clean:
