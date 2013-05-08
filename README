@@ -14,7 +14,7 @@ Thanks for your interest in vertex collocation profiles. I hope to continue deve
 CHAPTER 2. CONTENTS
 -------------------
 
-The code base comprises contains two main components.
+The code base comprises two main components.
 
 1) A header-only library containing processor-efficient and memory-efficient graph classes, VCP computation template classes, and supporting classes.
 2) A set of binaries to support easy usage of the library for common tasks such as generating VCP vectors, outputting VCP mappings, and working with the compressed sparse row format used by the library.
