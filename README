@@ -1,9 +1,107 @@
-vcp
-===
-
-Vertex Collocation Profiles Code Base
+vcp - Vertex Collocation Profiles Code Base
+===========================================
 
 Author: Ryan N. Lichtenwalter
+Email: rlichtenwalter@gmail.com
 
-Please send feedback, requests for assistance, proposals for changes, and other pertinent communication to:
-rlichtenwalter@gmail.com
+
+CHAPTER 1. PREAMBLE
+-------------------
+
+Thanks for your interest in vertex collocation profiles. I hope to continue development to increase the generality and the performance of the method to suit various needs and research goals. Please send feedback, requests for assistance, proposals for changes, and other pertinent communication to: rlichtenwalter@gmail.com
+
+
+CHAPTER 2. CONTENTS
+-------------------
+
+The code base comprises contains two main components.
+
+1) A header-only library containing processor-efficient and memory-efficient graph classes, VCP computation template classes, and supporting classes.
+2) A set of binaries to support easy usage of the library for common tasks such as generating VCP vectors, outputting VCP mappings, and working with the compressed sparse row format used by the library.
+
+For use cases in which VCP vectors are desired for some collection of vertex pairs, the binary vcp_generate should serve. All of the binaries will report information about their usage if called with no arguments, with '-h' or with '--help'.
+
+
+CHAPTER 3. BUILDING
+-------------------
+
+The header-only library does not need to be built to be used by external code. The included set of binaries must be built prior to use. This is facilitated by a GNU make script.
+
+To build the binaries, navigate to the project top-level directory and type:
+
+make
+
+The use of templates and template meta-programming features mean that compile times may be slightly longer than is expected for a project of this size, but building the project should still require only a matter of seconds on a modern machine. To parallelize the build, pass the '-j' flag to make with a number of simultaneous jobs to run, which generally should not exceed the number of cores available on the machine:
+
+make -j 4
+
+The project is written in strict conformance to C++11 to take advantage of several new features offered by that version of the C++ standard. It should build without warnings or errors on any compiler supporting C++11, but it is tested with GNU g++ version 4.8.0. In the event that your machine does not have a C++11 compiler installed, I have provided a script designed to download, build, and install GNU g++ in a user directory with no root privileges required. The script is located in the VCP project top-level directory and is called build_local_gcc.sh. It should be called with two arguments: 1) the version of GNU gcc to build and 2) the existing directory in which the download, build, and installation should be performed. Here is example usage:
+
+mkdir -p ~/opt
+build_local_gcc.sh 4.8.0 ~/opt
+
+Please be aware that building GNU gcc may take several hours.
+
+If you encounter a segmentation fault or exception while using the VCP library through one of the provided binaries, you can perform a debugging build. This enables assertions and embeds debugging symbols into the binary. To construct this build, invoke make as follows from the project top-level directory:
+
+make DEBUG=1
+
+After building in this manner you will be able to debug with GNU gdb or some other tool of your choice.
+
+Please report all problems building the project and all errors encountered while using the library to the email address listed above at your convenience.
+
+
+CHAPTER 4. LIBRARY USAGE
+------------------------
+
+Because the library is header-only, it is not required to build the project to use the library in your code. Simply pass the VCP project include directory as an include search path to your compiler and include the relevant VCP header files in your code. Here is an example assuming that I have the VCP project directory in my home directory, designated by '~', I am compiling with GNU g++, and my code is in an arbitrary location:
+
+g++ -std=c++11 -I ~/vcp/inc myfile.cpp
+
+where contents of myfile.cpp begin thus:
+
+#include <vcp/graph.hpp>
+#include <vcp/vcp.hpp>
+
+In this case, I am including the undirected unirelational graph class and the main VCP algorithm header file into myfile.cpp. The VCP files can be included in the same way in your project headers or any other files as long as the VCP include directory is provided for your compiler to search.
+
+The following headers are available:
+
+- graph.hpp: This header offers an extremely processor-efficient and memory-efficient unirelational graph class. This class can handle both undirected and directed graphs, but directed graphs will only have efficient edge access in one direction. The graph class implements the compressed sparse row (CSR) format as two arrays of void pointers. The graph literally is embodied as pointers in contiguous storage and graph operations correspond to dereferences.
+
+- directed_graph.hpp: This header provides bidirectional support so that edge accesses are available and fast in either direction. It has a different but analogous interface thus related.
+
+- multirelational_graph.hpp: The same as the graph class above except with an additional vertex_id indexed array that maintains information on the relations present over an edge as an integral-encoded bitset.
+
+- multirelational_directed_graph.hpp: The same as the directed_graph class above with support corresponding to the multirelational_graph class above.
+
+- vcp.hpp: This header includes all available VCP algorithms and algorithm specializations. If you mean to include a VCP algorithm in your project, you should include this header file. You need not include any of the specialized header files listed below, because they will all be included by this header and compiled on-demand. The specialized headers are nonetheless a good resource for learning more about the API. This header is notable for implementing the naive VCP algorithm, which generalizes to any values of n, r, and d. Nonetheless, it will almost always be overridden by a much more efficient template specialization.
+
+- vcp_X_X_X.hpp: These header files contain either full or partial specializations of the vcp template class, where the specialization corresponds to particular values of n, r, and d.
+
+- vcp_static_mapper.hpp: This header file contains a general VCP subgraph-to-element mapper. The mapping is static as described in the paper "Vertex collocation profiles: theory, computation, and results", meaning that sufficient memory must be available to store the mapping table. The table is generated upon object construction. Though the implementation is extremely fast, memory requirements become problematic for combinations of large n and r. The included binary making use of this class offers the option to specify a maximum amount of memory to allow for the mapping table, and it will fail prior to allocation or processing if more memory than this is required.
+
+- vcp_dynamic_mapper.hpp: This header file contains all the facilities necessary for dynamic subgraph-to-element mapping as described in "Vertex collocation profiles: theory, computation, and results". These facilities include the determination of canonical subgraph addresses based on an arbitrary connectivity matrix, the creation of a connectivity matrix from an arbitrary subgraph address, and information about the number of elements in a particular VCP vector. To allow this class to operate with maximal efficiency and minimal memory requremenets, it requires compile-time availability of template parameters n, r, and d. The additional benefit is that some computations incur no runtime cost. This class is designed to scale well for sparsely populated VCPs with even large values of n and r, directed or undirected, and it pairs well with the VCP computation classes designed for the same purpose, which also require compile-time availability of parameters n, r, and d.
+
+- square_matrix.hpp: This header file provides a statically or dynamically allocated square matrix, with the allocation type depending upon the template parameter n. For n==0, the allocation type is dynamic and the size is determined by a parameter to the constructor.
+
+
+CHAPTER 5. DEPENDENCIES
+-----------------------
+
+The VCP library relies upon the boost multiprecision library to support multirelational VCPs having an address space exceeding native integer support. In addition, the binaries depend upon the Templatized C++ Command Line Parser (TCLAP) library to perform robust argument parsing, usage printing, and argument error handling.
+
+
+CHAPTER 6. DESIGN DECISIONS
+----------------------------
+
+Several design decisions corresponding to facts, realizations, or benchmark results that may be non-obvious are documented here both for the benefit of the author and for the benefit of potential contributors. As additional design issues arise, they will be appended here.
+
+- The library is header-only instead of separating code into interface and implementation files. There are four reasons for this choice. First, the extensive use of templates requires that implementations exist in the same compilation units as their corresponding headers. The export keyword, which partially circumvents this requirement, is currently implemented only in the Comeau C++ compiler and is of limited utility. Second, header-only libraries are often desirable because they do not require any complex building and linking to couple them with other projects. Third, the project is open source, and there is no reason to avoid releasing actual implementation source code, which is occasionally a motivation for separating implementations from interfaces. I achieve the aesthetic effect of interface clarity by placing function definitions outside the class definition in each header file. Finally, benchmarks showed a decrease in algorithm run times when moving from a standard build format to a header-only format.
+
+- The classes vcp_3_1_0, vcp_3_1_1, vcp_4_1_0, and vcp_4_1_1 perform multiplications and additions in the VCP canonical subgraph address space instead of performing bit shifting and bitwise or. Benchmarks show that the use of bit shifting and bitwise or is consistently a fractional percentage slower on x86_64 processors, which possess barrel shifters. This may be due to a greater number of adders available in the ALU for the deluge of operations required of the deeply pipelined superscalar architecture. Though the compiler cannot effectively optimize the multiplications and additions because it cannot know that the values will have xor values of #ffffffff, it is surprising that it does not optimize the bit shifting operations into multiplications and additions where that is likely to be faster. It may require too much knowledge about specific processor internals to make this decision.
+
+- A std::array is constructed internal to vcp_3_1_0, vcp_3_1_1, vcp_4_1_0, and vcp_4_1_1 generate_vector functions and returned by value. Benchmarks showed that this was the fastest option, performing no worse than and often better than writing to an iterator range passed by value, writing to a std::array passed by reference, or writing to a std::vector passed by reference. There should be no reason that return value optimization is not performed so that the actual stack allocations for the std::array are occuring on the call stack outside the function.
+
+
+
