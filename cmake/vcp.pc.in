@@ -1,0 +1,7 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
+
+Name: vcp
+Description: Header-only C++ library for Vertex Collocation Profile computation on graphs
+Version: @PROJECT_VERSION@
+Cflags: -I${includedir}

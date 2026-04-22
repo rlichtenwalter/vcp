@@ -48,4 +48,3 @@ while( $out_linenum < $vertex_count ) {
 	print "\n";
 	++$out_linenum;
 }
-

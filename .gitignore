@@ -1,0 +1,9 @@
+build/
+build-debug/
+build-install/
+.cache/
+.claude/
+**/.vscode
+
+# NFS temporary files (appear when files are deleted while still open over NFS)
+.nfs*
