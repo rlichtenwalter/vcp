@@ -34,6 +34,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Vendored `lib/boost_1_53_0/` (~23 MB, 2013 vintage)
 - Vendored `lib/tclap-1.2.1/`
 
+### Fixed
+- `multirelational_graph::edge_value` and `multirelational_directed_graph::edge_value` now return 0 (unconnected) when passed the `edges_end()` sentinel, matching the contract of the simple `graph` and `directed_graph` siblings. Callers in `vcp::edge_value()` pipe `edge()` results directly into `edge_value()` without a null check; the previous unconditional array lookup caused an out-of-bounds read on any multirelational graph with missing edges (e.g. paths).
+- `directed_to_undirected` no longer infinite-loops on directed graphs whose out-neighbor and in-neighbor sets differ. The two tail merge loops were missing their iterator advances. Also skip the output block for isolated vertices (empty neighbor list), whose `neighbors.end() - 1` formed a pointer before `begin()`.
+
 ## [1.0.0] - 2012-05-01
 
 ### Added

@@ -71,16 +71,20 @@ int main(int argc, char *argv[]) {
       if (!bidirectional) {
         while (outIt != outEnd) {
           neighbors.push_back(g.target_of(outIt));
+          ++outIt;
         }
         while (inIt != inEnd) {
           neighbors.push_back(g.target_of(inIt));
+          ++inIt;
         }
       }
-      std::vector<vcp::const_vertex_iterator>::const_iterator neighbors_it(neighbors.begin());
-      while (neighbors_it < neighbors.end() - 1) {
-        std::cout << g.vertex_id(*neighbors_it++) << ' ';
-      }
-      if (neighbors_it < neighbors.end()) {
+      // Guard against isolated vertices: neighbors.end() - 1 is ill-formed
+      // when the vector is empty (pointer arithmetic below begin()).
+      if (!neighbors.empty()) {
+        std::vector<vcp::const_vertex_iterator>::const_iterator neighbors_it(neighbors.begin());
+        while (neighbors_it < neighbors.end() - 1) {
+          std::cout << g.vertex_id(*neighbors_it++) << ' ';
+        }
         std::cout << g.vertex_id(*neighbors_it);
       }
       std::cout << '\n';

@@ -200,7 +200,10 @@ const_edge_iterator multirelational_graph<r>::edge(const_vertex_iterator source,
 template <std::size_t r>
 typename multirelational_graph<r>::connectivity_address_type
 multirelational_graph<r>::edge_value(const_edge_iterator it) const {
-  return edge_values[edge_id(it)];
+  // A non-existent edge has connectivity value 0 (unconnected), matching the
+  // contract of graph::edge_value / directed_graph::edge_value. Callers such
+  // as vcp::edge_value() pipe edge() directly here without a null check.
+  return it == edges_end() ? 0 : edge_values[edge_id(it)];
 }
 
 template <std::size_t r>
