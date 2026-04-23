@@ -329,6 +329,53 @@ for fixture_path in "$FIXTURES_DIR"/graphs_undirected/*.txt; do
 done
 
 # =============================================================================
+# Phase 6 — VCP_{4,1,1} invariant validation on Bug-2 coverage fixtures
+# =============================================================================
+#
+# Unlike Phases 2–5 (byte-for-byte legacy-vs-current diffs), this phase
+# validates absolute correctness by parsing vcp_generate outputs and
+# asserting three invariants per pair:
+#   (1) sum(counts) == C(V-2, 2)      [catches Defect A/B]
+#   (2) max(counts) <= C(V-2, 2)      [catches underflow]
+#   (3) counts[expected_elem] == 1    [catches Defect C, V=4 only]
+#
+# The assertions are independent of any reference build, so they remain
+# meaningful even when the legacy build contains known defects. The phase
+# runs both builds in parallel so either side can be identified as faulty.
+echo
+echo "=== Phase 6: VCP_{4,1,1} invariant validation (legacy and current) ==="
+{
+    echo
+    echo "## Phase 6 — VCP_{4,1,1} invariant validation (Bug-2 fixtures)"
+    echo
+    echo "Absolute-correctness checks (not a legacy-vs-current diff). See"
+    echo "\`regression/validate_bug2_invariants.py\` for the assertion semantics."
+    echo
+    echo "| Build | Result |"
+    echo "|---|---|"
+} >> "$REPORT"
+
+for build_tag in legacy current; do
+    build_bin="$SCRIPT_DIR/bin/$build_tag"
+    if [ ! -x "$build_bin/vcp_generate" ] || [ ! -x "$build_bin/vcp_map" ]; then
+        echo "| $build_tag | SKIP (binaries missing) |" >> "$REPORT"
+        SKIP_COUNT=$((SKIP_COUNT + 1))
+        continue
+    fi
+    if python3 "$SCRIPT_DIR/validate_bug2_invariants.py" \
+        --bin "$build_bin" \
+        --fixtures "$FIXTURES_DIR" \
+        >> "$RESULTS_DIR/bug2_invariants_${build_tag}.txt" 2>&1
+    then
+        echo "| $build_tag | PASS |" >> "$REPORT"
+        pass "bug2_invariants $build_tag"
+    else
+        echo "| $build_tag | FAIL |" >> "$REPORT"
+        fail "bug2_invariants $build_tag (see results/bug2_invariants_${build_tag}.txt)"
+    fi
+done
+
+# =============================================================================
 # Summary
 # =============================================================================
 TOTAL=$((PASS_COUNT + FAIL_COUNT + SKIP_COUNT))

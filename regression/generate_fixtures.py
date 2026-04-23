@@ -199,6 +199,43 @@ STRUCTURED_UNDIRECTED: dict[str, UndirectedGraph] = {
     "isolated_5": isolated_vertices(5),
 }
 
+
+def _edge_only_4() -> UndirectedGraph:
+    """V=4, single edge 0-1, vertices 2 and 3 isolated."""
+    g = UndirectedGraph.empty(4)
+    g.add_edge(0, 1)
+    return g
+
+
+def _triangle_plus_isolate_4() -> UndirectedGraph:
+    """V=4, triangle on {0, 1, 2}, vertex 3 isolated."""
+    g = UndirectedGraph.empty(4)
+    for u, v in [(0, 1), (1, 2), (0, 2)]:
+        g.add_edge(u, v)
+    return g
+
+
+def _k22_4() -> UndirectedGraph:
+    """V=4, complete bipartite K_{2,2}: parts {0,1} and {2,3}."""
+    g = UndirectedGraph.empty(4)
+    for u in (0, 1):
+        for v in (2, 3):
+            g.add_edge(u, v)
+    return g
+
+
+def _directed_asym_from(g: UndirectedGraph, orientation) -> DirectedGraph:
+    """Directed orientation where each undirected edge is mapped to one arc
+    determined by `orientation(u, v)` returning (src, dst)."""
+    d = DirectedGraph.empty(g.n)
+    for u in range(g.n):
+        for v in g.adj[u]:
+            if u < v:
+                src, dst = orientation(u, v)
+                d.add_arc(src, dst)
+    return d
+
+
 STRUCTURED_DIRECTED: dict[str, DirectedGraph] = {
     "dk3_oriented": directed_from(complete_graph(3)),
     "dk3_bidirectional": directed_bidirectional(complete_graph(3)),
@@ -207,6 +244,31 @@ STRUCTURED_DIRECTED: dict[str, DirectedGraph] = {
     "dcycle4": directed_from(cycle_graph(4)),
     "dp4_forward": directed_from(path_graph(4)),
     "disolated_5": DirectedGraph.empty(5),
+    # --- Bug 2 coverage fixtures (VCP_{4,1,1}) ---
+    # Each graph isolates a specific combination of v1v2 connectivity and
+    # Defect-C trigger (shared v3 with nonzero c13 AND c23). See
+    # CHANGELOG.md / vcp_4_1_1.hpp commit message for the full taxonomy.
+    # Mutual edge only: Defect-A/B trigger, no shared v3.
+    "dbug2_mutual_edge": directed_bidirectional(_edge_only_4()),
+    # Asymmetric edge only: no Defect triggers; control baseline.
+    "dbug2_asym_edge": directed_from(_edge_only_4()),
+    # Mutual triangle + isolate: Defect-A/B + Defect-C on (0,1), (0,2), (1,2).
+    "dbug2_mutual_triangle": directed_bidirectional(_triangle_plus_isolate_4()),
+    # Transitive tournament on {0,1,2} (arcs 0→1, 0→2, 1→2) + vertex 3 isolated.
+    # Asymmetric shared-v3 exercise of Defect-C without triggering Defect-A/B
+    # (v1v2 is OUT/IN, never BOTH).
+    "dbug2_asym_triangle": _directed_asym_from(
+        _triangle_plus_isolate_4(),
+        orientation=lambda u, v: (u, v),  # smaller → larger (transitive)
+    ),
+    # K_{2,2} mutual: Defect-C via mutual shared-v3 without Defect-A/B
+    # on within-part pairs (v1v2=0).
+    "dbug2_k22_mutual": directed_bidirectional(_k22_4()),
+    # K_{2,2} asymmetric (left-to-right): Defect-C via asymmetric shared-v3.
+    "dbug2_k22_asym": _directed_asym_from(
+        _k22_4(),
+        orientation=lambda u, v: (u, v),
+    ),
 }
 
 # Random graphs: fixed seed so regeneration is byte-stable.
@@ -309,6 +371,13 @@ def main() -> int:
         "er_n20_p0.2_s42": 50,
         "er_n50_p0.1_s42": 100,
         "er_n100_p0.05_s42": 200,
+        # Bug-2 fixtures: all 6 pairs of V=4 graph.
+        "dbug2_mutual_edge": 6,
+        "dbug2_asym_edge": 6,
+        "dbug2_mutual_triangle": 6,
+        "dbug2_asym_triangle": 6,
+        "dbug2_k22_mutual": 6,
+        "dbug2_k22_asym": 6,
     }
 
     for name, limit in pair_limits.items():
