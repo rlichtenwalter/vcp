@@ -113,7 +113,11 @@ if [ ! -d "$FIXTURES_DIR/undirected" ]; then
     python3 "$SCRIPT_DIR/generate_fixtures.py"
 fi
 
-# Large-tier fixtures (opt-in, ~900 MB, generated idempotently).
+# Large-tier fixtures (opt-in, ~400 MB hardlinked, generated idempotently
+# by the C++ tool `vcp_gen_er_fixture`). Built alongside the other CLI
+# tools; any ref's build tree will have its own copy under bin/<slug>/.
+# We use the current branch's copy for generation since fixtures are
+# not ref-dependent.
 LARGE_UNDIRECTED="$FIXTURES_DIR/undirected/er_n10000000_d5_s42.txt"
 LARGE_DIRECTED="$FIXTURES_DIR/directed/dsym_n10000000_d5_s42.txt"
 LARGE_PAIRS="$FIXTURES_DIR/pairs/sample_n10000000_d5_s42_k100000.pairs"
@@ -121,8 +125,25 @@ if [ "$LARGE" -eq 1 ]; then
     if [ ! -f "$LARGE_UNDIRECTED" ] \
        || [ ! -f "$LARGE_DIRECTED" ] \
        || [ ! -f "$LARGE_PAIRS" ]; then
-        echo ">> Generating large-tier fixtures (may take several minutes)"
-        python3 "$SCRIPT_DIR/generate_fixtures.py" --only-large
+        echo ">> Generating large-tier fixtures"
+        # Find the generator binary: prefer the current-branch slug's bin
+        # tree (built alongside the benchmark refs), otherwise fall back
+        # to the top-level build/ used for interactive development.
+        GEN_BIN=""
+        for candidate in \
+            "$SCRIPT_DIR/bin/${SLUGS[${#SLUGS[@]}-1]}/vcp_gen_er_fixture" \
+            "$SCRIPT_DIR/../build/vcp_gen_er_fixture"; do
+            if [ -x "$candidate" ]; then
+                GEN_BIN="$candidate"
+                break
+            fi
+        done
+        if [ -z "$GEN_BIN" ]; then
+            echo "ERROR: could not find vcp_gen_er_fixture binary." >&2
+            echo "       Build it with: cmake --build build -j" >&2
+            exit 2
+        fi
+        "$GEN_BIN" -n 10000000 -d 5 -s 42 -k 100000 -o "$FIXTURES_DIR"
     fi
 fi
 

@@ -406,8 +406,8 @@ LARGE_PAIRS="$BENCH_FIXTURES/pairs/sample_n10000000_d5_s42_k100000.pairs"
     echo
     echo "10M-node avg-degree-5 sparse ER fixture shared with the benchmark"
     echo "suite (\`benchmark/fixtures/\`). Skipped if the fixture is absent;"
-    echo "generate with \`cd benchmark && ./run.sh --large\` (or"
-    echo "\`./generate_fixtures.py --only-large\`)."
+    echo "generate with \`cd benchmark && ./run.sh --large\` (which"
+    echo "shells out to the \`vcp_gen_er_fixture\` C++ tool)."
     echo
 } >> "$REPORT"
 
