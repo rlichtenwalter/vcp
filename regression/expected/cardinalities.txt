@@ -1,0 +1,25 @@
+# Paper-derived ground-truth cardinalities for VCP_{n,r,d}.
+# Source: Lichtenwalter & Chawla, "Vertex collocation profiles: theory,
+#         computation, and results", SpringerPlus 2014, 3:116, Table 2.
+#
+# Format: n r d expected_cardinality
+# d=0 is undirected; paper's Table 2 is all undirected (d=0).
+# Directed cardinalities (d=1) come from the paper text, Figure 3, and
+# from the vcp_dynamic_mapper C++ source, which the legacy binary also
+# reflects.
+#
+# These cardinalities are the number of distinct VCP elements — i.e., the
+# number of distinct values produced by `vcp_map n r d` on stdout.
+
+# Undirected (d=0)
+3 1 0 8
+3 2 0 64
+3 3 0 512
+3 4 0 4096
+3 5 0 32768
+4 1 0 40
+4 2 0 2176
+5 1 0 240
+
+# Directed (d=1). Paper notes: VCP_{4,1,1} = 2112.
+4 1 1 2112
