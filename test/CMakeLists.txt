@@ -15,6 +15,10 @@ include(Catch)
 # follow-up release.
 add_executable(test_placeholder test_placeholder.cpp)
 target_link_libraries(test_placeholder PRIVATE vcp::vcp Catch2::Catch2WithMain)
+# Inherit the sanitizer flags set at the root so tests exercise the same
+# instrumentation as tools when VCP_SANITIZE=ON.
+target_compile_options(test_placeholder PRIVATE ${VCP_SANITIZE_FLAGS})
+target_link_options(test_placeholder    PRIVATE ${VCP_SANITIZE_FLAGS})
 catch_discover_tests(test_placeholder)
 
 # --- CLI smoke tests ---

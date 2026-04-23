@@ -71,3 +71,30 @@ jobs:
 
       - name: Run clang-tidy
         run: clang-tidy -p build include/vcp/*.hpp tools/*.cpp test/*.cpp
+
+  sanitize:
+    # Debug build with AddressSanitizer + UndefinedBehaviorSanitizer.
+    # Runs the full test suite so any UB or memory bug instantiated in
+    # test code fails the PR. Halt-on-error is inherited from the
+    # CMake-side -fno-sanitize-recover=all, but we also set the runtime
+    # envs belt-and-braces in case the flag is ever changed.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Boost headers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libboost-dev
+
+      - name: Configure (Debug + sanitizers)
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Debug -DVCP_SANITIZE=ON
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test under sanitizers
+        env:
+          ASAN_OPTIONS: halt_on_error=1:detect_leaks=1:abort_on_error=1
+          UBSAN_OPTIONS: halt_on_error=1:abort_on_error=1:print_stacktrace=1
+        run: ctest --test-dir build --output-on-failure

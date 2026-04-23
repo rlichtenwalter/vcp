@@ -64,6 +64,25 @@ cmake -B build -DVCP_MAX_NEIGHBORS=32768
 ctest --test-dir build --output-on-failure
 ```
 
+### Sanitized build
+
+Set `-DVCP_SANITIZE=ON` with a Debug build to enable AddressSanitizer and
+UndefinedBehaviorSanitizer across every target (library consumers, tools,
+tests, and — when combined with `-DVCP_BUILD_BENCHMARKS=ON` — benchmarks):
+
+```bash
+cmake -B build-san -DCMAKE_BUILD_TYPE=Debug -DVCP_SANITIZE=ON
+cmake --build build-san
+ASAN_OPTIONS=halt_on_error=1:detect_leaks=1:abort_on_error=1 \
+UBSAN_OPTIONS=halt_on_error=1:abort_on_error=1:print_stacktrace=1 \
+ctest --test-dir build-san --output-on-failure
+```
+
+The `sanitize` CI job runs this combination on every PR, so UB and memory
+errors surface as failures rather than reaching `main`. The
+`-fno-sanitize-recover=all` flag makes every sanitizer diagnostic a hard
+error; Release builds are never affected.
+
 ## Library usage
 
 Because the library is header-only, you do not need to build anything to use it

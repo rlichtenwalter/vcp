@@ -34,3 +34,10 @@ target_compile_options(bench_vcp PRIVATE
     -O3
     -Wall -Wextra -pedantic -Wno-unused-local-typedefs
 )
+# Propagate VCP_SANITIZE flags if enabled at the root. Sanitized
+# benchmarks are mostly a smoke signal - the -O3 force here fights with
+# -O0 defaults sanitizers want - but running the micro-benchmarks under
+# ASan+UBSan at least proves the library headers don't UB under the
+# hot-path instantiations the CLI tests do not cover.
+target_compile_options(bench_vcp PRIVATE ${VCP_SANITIZE_FLAGS})
+target_link_options(bench_vcp    PRIVATE ${VCP_SANITIZE_FLAGS})

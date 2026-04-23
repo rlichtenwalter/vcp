@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - CLI `--version` output for each tool, sourced from VERSION via CMake
 
 ### Changed
+- `VCP_SANITIZE` now enables AddressSanitizer **and** UndefinedBehaviorSanitizer (previously only ASan), applies to every built target (tools, tests, benchmarks — previously only CLI tools), and passes `-fno-sanitize-recover=all` so every sanitizer diagnostic is a hard error. The new CI `sanitize` job builds this configuration and runs the test suite on every PR.
 - **BREAKING**: Move headers from `inc/vcp/` to `include/vcp/` (use `#include <vcp/vcp.hpp>`)
 - **BREAKING**: Move CLI tool sources from `src/` to `tools/` following header-only library conventions
 - **BREAKING**: Minimum C++ standard raised from C++11 to C++14

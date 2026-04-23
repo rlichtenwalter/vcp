@@ -1,6 +1,5 @@
 build/
-build-debug/
-build-install/
+build-*/
 .cache/
 .claude/
 **/.vscode

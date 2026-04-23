@@ -97,13 +97,26 @@ foreach(tool IN LISTS VCP_TOOLS)
     )
 endforeach()
 
-option(VCP_SANITIZE "Enable AddressSanitizer in Debug builds" OFF)
-if(VCP_SANITIZE)
-    foreach(tool IN LISTS VCP_TOOLS)
-        target_compile_options(${tool} PRIVATE $<$<CONFIG:Debug>:-fsanitize=address>)
-        target_link_options(${tool} PRIVATE $<$<CONFIG:Debug>:-fsanitize=address>)
-    endforeach()
-endif()
+# --- Sanitizers ---
+# When -DVCP_SANITIZE=ON, every consumer of the library (tools, tests,
+# benchmarks) is compiled and linked with AddressSanitizer +
+# UndefinedBehaviorSanitizer. Guarded on Debug builds so Release artifacts
+# are unaffected.
+#
+# -fno-sanitize-recover=all turns every sanitizer diagnostic into a hard
+# error (abort + non-zero exit). Without this, UBSan reports and
+# continues, which makes it too easy for CI to miss regressions.
+#
+# The flags are applied per-target rather than via the header-only
+# INTERFACE library to avoid leaking build-time sanitizer requirements
+# into the installed/exported targets that downstream consumers would
+# pick up via find_package(vcp).
+option(VCP_SANITIZE "Enable AddressSanitizer + UndefinedBehaviorSanitizer in Debug builds" OFF)
+set(VCP_SANITIZE_FLAGS $<$<BOOL:${VCP_SANITIZE}>:$<$<CONFIG:Debug>:-fsanitize=address,undefined;-fno-sanitize-recover=all;-fno-omit-frame-pointer>>)
+foreach(tool IN LISTS VCP_TOOLS)
+    target_compile_options(${tool} PRIVATE ${VCP_SANITIZE_FLAGS})
+    target_link_options(${tool}    PRIVATE ${VCP_SANITIZE_FLAGS})
+endforeach()
 
 # --- Tests ---
 option(VCP_BUILD_TESTS "Build tests" ${PROJECT_IS_TOP_LEVEL})
