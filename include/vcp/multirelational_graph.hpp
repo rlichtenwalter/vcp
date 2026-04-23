@@ -214,19 +214,16 @@ bool multirelational_graph<r>::edge_exists(const_vertex_iterator source,
 
 template <std::size_t r>
 std::ostream &operator<<(std::ostream &os, multirelational_graph<r> const &g) {
-  for (const_vertex_iterator vIt = g.vertices_begin(); vIt < g.vertices_end(); ++vIt) {
-    const_edge_iterator nIt = g.neighbors_begin(vIt);
-    while (nIt < g.neighbors_end(vIt) - 1) {
-      os << g.vertex_id(g.target_of(nIt)) << ',' << g.edge_value(nIt) << ' ';
-      ++nIt;
-    }
-    if (nIt < g.neighbors_end(vIt)) {
+  for (const_vertex_iterator vIt = g.vertices_begin(); vIt != g.vertices_end(); ++vIt) {
+    const_edge_iterator const nBegin = g.neighbors_begin(vIt);
+    const_edge_iterator const nEnd = g.neighbors_end(vIt);
+    for (const_edge_iterator nIt = nBegin; nIt != nEnd; ++nIt) {
+      if (nIt != nBegin) {
+        os << ' ';
+      }
       os << g.vertex_id(g.target_of(nIt)) << ',' << g.edge_value(nIt);
-      ++nIt;
     }
-    if (vIt < g.vertices_end()) {
-      os << '\n';
-    }
+    os << '\n';
   }
   return os;
 }

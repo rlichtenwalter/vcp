@@ -286,19 +286,16 @@ bool multirelational_directed_graph<r>::in_edge_exists(const_vertex_iterator sou
 
 template <std::size_t r>
 std::ostream &operator<<(std::ostream &os, multirelational_directed_graph<r> const &g) {
-  for (const_vertex_iterator vIt(g.vertices_begin()); vIt < g.vertices_end(); ++vIt) {
-    const_edge_iterator nIt(g.out_neighbors_begin(vIt));
-    while (nIt < g.out_neighbors_end(vIt) - 1) {
-      os << g.vertex_id(g.target_of(nIt)) << ',' << g.edge_value(nIt) << ' ';
-      ++nIt;
-    }
-    if (nIt < g.out_neighbors_end(vIt)) {
+  for (const_vertex_iterator vIt = g.vertices_begin(); vIt != g.vertices_end(); ++vIt) {
+    const_edge_iterator const nBegin = g.out_neighbors_begin(vIt);
+    const_edge_iterator const nEnd = g.out_neighbors_end(vIt);
+    for (const_edge_iterator nIt = nBegin; nIt != nEnd; ++nIt) {
+      if (nIt != nBegin) {
+        os << ' ';
+      }
       os << g.vertex_id(g.target_of(nIt)) << ',' << g.edge_value(nIt);
-      ++nIt;
     }
-    if (vIt < g.vertices_end()) {
-      os << '\n';
-    }
+    os << '\n';
   }
   return os;
 }
