@@ -112,6 +112,12 @@ if(VCP_BUILD_TESTS)
     add_subdirectory(test)
 endif()
 
+# --- Benchmarks ---
+option(VCP_BUILD_BENCHMARKS "Build library-level micro-benchmarks" OFF)
+if(VCP_BUILD_BENCHMARKS)
+    add_subdirectory(benchmark)
+endif()
+
 # --- Install ---
 include(CMakePackageConfigHelpers)
 

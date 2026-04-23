@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Benchmark suite under `benchmark/` with two layers:
+  - Cross-ref tool-level runner (`benchmark/run.sh`) that builds arbitrary git revisions in isolated worktrees, times the CLI tools against a curated set of seeded fixtures, and emits a markdown comparison table. Auto-detects legacy (Makefile) vs modern (CMake) build systems and prepends the 2012 baseline commit by default so current-branch performance can be measured directly against the original GitHub state.
+  - Catch2 library-level micro-benchmarks (`benchmark/bench_vcp.cpp`) gated on the new `VCP_BUILD_BENCHMARKS` CMake option, mirroring the `bench_kdtree.cpp` / `bench_mrmr.cpp` pattern in sibling libraries.
 - CMake build system (minimum 3.21) replacing the hand-written Makefile
 - CMake install support with `find_package(vcp)` for downstream consumers
 - pkg-config support for non-CMake consumers

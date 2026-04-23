@@ -1,0 +1,171 @@
+# vcp benchmark suite
+
+Two complementary layers:
+
+1. **Cross-ref tool-level benchmark** (`run.sh`, `build-ref.sh`)
+   — times the CLI tools end-to-end against one or more git revisions
+   and emits a markdown comparison table. Works on both the 2012 legacy
+   Makefile build and the modern CMake build, so you can compare the
+   original GitHub state against any branch.
+
+2. **Catch2 library-level micro-benchmarks** (`bench_vcp.cpp`)
+   — fine-grained timing of individual library operations (graph parse,
+   VCP enumeration for a given template specialization). Only builds
+   against the modernized CMake setup, so it cannot measure the 2012
+   code. Useful for tracking the effect of a single change within the
+   current branch.
+
+Both are driven by deterministic, seeded random fixtures so measurements
+are reproducible run-to-run and machine-to-machine.
+
+## Cross-ref tool-level benchmark
+
+### One-shot: current branch vs the 2012 legacy baseline
+
+```bash
+./benchmark/run.sh
+```
+
+This builds the legacy commit (`ba1592d`) and the tip of `develop` in
+isolated git worktrees, runs every workload 3 times against each, and
+writes a markdown comparison table to
+`benchmark/results/<timestamp>/comparison.md` (with a
+`benchmark/results/latest` symlink).
+
+### Arbitrary refs
+
+```bash
+./benchmark/run.sh --refs develop,feature/foo,v1.0.0
+./benchmark/run.sh --refs HEAD~5 --no-legacy
+```
+
+The legacy commit is prepended automatically unless `--no-legacy` is
+passed. Each ref is built at the specified commit in its own worktree;
+the main working tree is untouched.
+
+### Options
+
+| Option | Default | Meaning |
+|--------|---------|---------|
+| `--refs REV[,REV...]` | `develop` | Comma-separated list of revspecs |
+| `--runs N` | `3` | Repetitions per workload; median reported |
+| `--timeout SEC` | `300` | Per-invocation wall-clock limit |
+| `--skip-build` | off | Reuse existing `bin/<slug>/` (fastest for iteration) |
+| `--no-legacy` | off | Do not prepend the legacy baseline |
+
+### Workloads
+
+The suite exercises every major code path:
+
+| Workload | Purpose |
+|----------|---------|
+| `vcp_gen {3,4} 1 0 n={200,500,1000}` | Undirected unirelational (specializations `vcp_{3,4}_1_0.hpp`) |
+| `vcp_gen {3,4} 1 1 n={200,500}` | Directed unirelational (specializations `vcp_{3,4}_1_1.hpp`) |
+| `vcp_gen {3,4} 2 0 n={100,200}` | Multirelational r=2 (generic `vcp_{3,4}_r_0.hpp` paths) |
+| `directed_to_undirected [-b]` | CSR neighbor-set intersection/union |
+| `ell_2_pairs` | 2-hop pair enumeration |
+
+Fixtures are sized so each `vcp_generate(4,r,d)` all-pairs workload runs
+~0.2 s to ~5 s on a modern CPU; smaller than that and timing is noise,
+larger and a full sweep takes too long. The full default sweep
+(2 refs × 17 workloads × 3 runs) completes in roughly 2-3 minutes.
+
+### Legacy-compatibility constraints
+
+Fixtures are curated to avoid the known legacy bugs so the same inputs
+run on both the 2012 and modern code:
+
+- **Directed fixtures** used with `directed_to_undirected` are
+  bidirectionally symmetric. Legacy infinite-loops when out- and
+  in-neighbor sets diverge (fixed on modern; see CHANGELOG under
+  `[Unreleased]`).
+- **Multirelational fixtures** are dense enough that the enumeration is
+  unlikely to probe a missing edge. Legacy's unguarded `edge_value()`
+  reads out of bounds on missing edges (also fixed on modern).
+- Any workload that nevertheless fails on a ref is reported as
+  `CRASH-<rc>` / `TIMEOUT` / `MISSING` rather than aborting the sweep.
+
+The `vcp_generate 4 1 1` workload currently crashes on both legacy and
+modern because of a separate pre-existing underflow in
+`vcp_4_1_1.hpp` that still needs to be fixed (requires re-deriving
+formulas from Lichtenwalter & Chawla 2014). Once that lands, the
+benchmark will pick it up automatically.
+
+### Raw data
+
+Every run's elapsed-seconds value is written to
+`results/<timestamp>/raw/<workload>__<slug>.log`, one line per run. Use
+these for computing variance, plotting distributions, or debugging a
+noisy cell in the summary table.
+
+## Catch2 library-level micro-benchmarks
+
+Build with the benchmark target enabled:
+
+```bash
+cmake -S . -B build -DVCP_BUILD_BENCHMARKS=ON -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+```
+
+Run:
+
+```bash
+# All benchmarks
+./build/benchmark/bench_vcp "[!benchmark]"
+
+# A specific category
+./build/benchmark/bench_vcp "[!benchmark][io]"
+./build/benchmark/bench_vcp "[!benchmark][vcp-4-1-0]"
+./build/benchmark/bench_vcp "[!benchmark][vcp-4-1-1]"
+./build/benchmark/bench_vcp "[!benchmark][vcp-4-2-0]"
+
+# More samples for tighter confidence intervals
+./build/benchmark/bench_vcp "[!benchmark]" --benchmark-samples 50
+```
+
+These benchmarks use Catch2's built-in `BENCHMARK_ADVANCED` /
+`Chronometer` infrastructure (same pattern as the kdtree and mRMR
+sibling libraries) and are compiled at `-O3 -DNDEBUG` regardless of the
+parent CMake build type. They are **not** registered with ctest, so
+`ctest` and `make test` skip them.
+
+Available categories (tags):
+
+| Tag | Covers |
+|-----|--------|
+| `[io]` | `graph` parse/serialize |
+| `[vcp-3-1-0]` | `vcp<3,1,false>` all-pairs |
+| `[vcp-4-1-0]` | `vcp<4,1,false>` all-pairs |
+| `[vcp-3-1-1]` | `vcp<3,1,true>` all-pairs |
+| `[vcp-4-1-1]` | `vcp<4,1,true>` all-pairs |
+| `[vcp-3-2-0]` | `vcp<3,2,false>` multirelational |
+| `[vcp-4-2-0]` | `vcp<4,2,false>` multirelational |
+
+## Files
+
+```
+benchmark/
+├── README.md               # this file
+├── bench_vcp.cpp           # Catch2 micro-benchmarks
+├── CMakeLists.txt          # builds bench_vcp (gated on VCP_BUILD_BENCHMARKS)
+├── build-ref.sh            # build vcp tools at an arbitrary git ref
+├── generate_fixtures.py    # deterministic fixture generation
+├── run.sh                  # cross-ref tool-level benchmark runner
+├── fixtures/               # generated; not checked in
+│   ├── undirected/
+│   ├── directed/
+│   ├── multirelational/
+│   └── pairs/
+├── bin/                    # per-ref binaries; not checked in
+│   ├── legacy/
+│   └── <slug>/
+├── worktree-<slug>/        # per-ref build worktrees; not checked in
+└── results/                # per-run reports; not checked in
+    ├── latest -> <ts>
+    └── <timestamp>/
+        ├── comparison.md
+        └── raw/
+```
+
+The `fixtures/`, `bin/`, `worktree-*/`, and `results/` directories are
+intentionally not checked in — they are regenerated per run.
