@@ -49,9 +49,10 @@ the main working tree is untouched.
 |--------|---------|---------|
 | `--refs REV[,REV...]` | `develop` | Comma-separated list of revspecs |
 | `--runs N` | `3` | Repetitions per workload; median reported |
-| `--timeout SEC` | `300` | Per-invocation wall-clock limit |
+| `--timeout SEC` | `300` (`1800` with `--large`) | Per-invocation wall-clock limit |
 | `--skip-build` | off | Reuse existing `bin/<slug>/` (fastest for iteration) |
 | `--no-legacy` | off | Do not prepend the legacy baseline |
+| `--large` | off | Append the 10M-node large tier (see below) |
 
 ### Workloads
 
@@ -90,6 +91,31 @@ modern because of a separate pre-existing underflow in
 `vcp_4_1_1.hpp` that still needs to be fixed (requires re-deriving
 formulas from Lichtenwalter & Chawla 2014). Once that lands, the
 benchmark will pick it up automatically.
+
+### Large tier (opt-in via `--large`)
+
+For measuring the effect of scaling-sensitive optimizations the small
+default fixtures are too quick: a 0.2-5 s workload on a 1-2k-node graph
+is dominated by graph parse and process startup, and two inner-loop
+implementations that differ by 2x at scale may not show any detectable
+difference there. `--large` appends four extra workloads on a single
+10M-node sparse ER graph (avg degree 5, ~25M undirected edges):
+
+| Workload | Graph | Pairs |
+|----------|-------|-------|
+| `vcp_gen 3 1 0 n=10M` | Undirected | 100k sampled |
+| `vcp_gen 4 1 0 n=10M` | Undirected | 100k sampled |
+| `vcp_gen 3 1 1 n=10M` | Directed (symmetric) | 100k sampled |
+| `vcp_gen 4 1 1 n=10M` | Directed (symmetric) | 100k sampled |
+
+The pairs file is a 100,000-entry uniform sample rather than all pairs
+(`C(10M, 2)` is ~5×10¹³ entries - infeasible, and on the ER inner loop
+nearly all of them would do zero work anyway). Graph fixtures total
+~900 MB on disk and take ~2-3 minutes to generate on first use;
+subsequent runs reuse them idempotently. The timeout default rises to
+1800 s so a slow legacy run still finishes instead of being censored.
+Legacy may nevertheless `CRASH` or `TIMEOUT` at this scale; that is
+reported in the table, not fatal.
 
 ### Raw data
 

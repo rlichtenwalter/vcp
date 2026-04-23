@@ -31,6 +31,9 @@ Legacy-compatibility constraints:
 from __future__ import annotations
 
 import argparse
+import array
+import math
+import os
 import random
 from dataclasses import dataclass, field
 from itertools import combinations
@@ -117,8 +120,132 @@ def erdos_renyi_bidirectional(n: int, p: float, seed: int) -> DirectedGraph:
     return g
 
 
+def stream_er_sparse(n: int, p: float, seed: int, path: Path) -> None:
+    """Stream a sparse G(n, p) adjacency listing directly to disk.
+
+    This is the unified large-random-graph procedure - memory-efficient
+    enough to run on 10M+ nodes without OOM, and format-agnostic
+    between the undirected and directed-bidirectional interpretations
+    (see note below). Small fixtures still use the in-memory
+    :class:`UndirectedGraph` / :class:`DirectedGraph` dataclasses where
+    clarity beats efficiency.
+
+    Memory profile for n=10M, avg_deg=5 (~25M edges):
+
+        degrees   int32[n]     ~40 MB
+        offsets   int32[n+1]   ~40 MB
+        neighbors int32[2m]    ~200 MB
+        cursor    int32[n]     ~40 MB
+        total                  ~320 MB, no Python object-per-edge overhead.
+
+    vs the naive "list of sets of Python ints" approach, which burns
+    ~2 GB on empty-set headers alone before counting the ~28 bytes of
+    PyLong overhead per element. That representation OOM-killed on a
+    15 GB box during the directed pass; this one peaks at ~400 MB.
+
+    Format note: the on-disk output is a line per vertex listing the
+    other endpoint of every incident edge, sorted ascending. That
+    representation is bit-identical under two interpretations:
+
+      1. Undirected: each edge {u, v} contributes v to u's row and u
+         to v's row.
+      2. Directed, bidirectionally symmetric: every sampled edge
+         becomes arcs u->v AND v->u, so v appears in u's out-list
+         and u in v's out-list.
+
+    So a single generated file serves both the undirected and
+    bidirectional-directed large-tier workloads without duplication.
+
+    Determinism: two passes over an identical seeded :class:`random.Random`
+    stream (pass 1 counts degrees, pass 2 emits to pre-sized slots)
+    produce a byte-identical output across runs and machines.
+
+    Sort-free emission: because we process sampled edges (u, v) with
+    u < v in ascending u order and the geometric-gap sampler produces
+    v values in ascending order within each u, every vertex x ends up
+    with its predecessors (u < x) prepended in ascending order followed
+    by its successors (v > x) in ascending order. Concatenation is
+    globally sorted without an explicit sort step.
+    """
+    if not (0.0 < p < 1.0):
+        raise ValueError(f"p must be in (0, 1); got {p}")
+    log1mp = math.log1p(-p)
+
+    # Pass 1: per-vertex degrees.
+    rng = random.Random(seed)
+    degrees = array.array("i", [0] * n)
+    for u in range(n - 1):
+        v = u
+        while True:
+            gap = int(math.log(rng.random()) / log1mp) + 1
+            v += gap
+            if v >= n:
+                break
+            degrees[u] += 1
+            degrees[v] += 1
+
+    # Offsets prefix-sum.
+    total = sum(degrees)
+    offsets = array.array("i", [0] * (n + 1))
+    running = 0
+    for u in range(n):
+        offsets[u] = running
+        running += degrees[u]
+    offsets[n] = running
+
+    # Pass 2: fill a flat int32 CSR array with the same edges.
+    neighbors = array.array("i", [0] * total)
+    cursor = array.array("i", offsets[:n])
+    rng = random.Random(seed)
+    for u in range(n - 1):
+        v = u
+        while True:
+            gap = int(math.log(rng.random()) / log1mp) + 1
+            v += gap
+            if v >= n:
+                break
+            neighbors[cursor[u]] = v
+            cursor[u] += 1
+            neighbors[cursor[v]] = u
+            cursor[v] += 1
+
+    # Pass 3: stream each vertex's row to disk.
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w") as f:
+        for u in range(n):
+            start = offsets[u]
+            end = offsets[u + 1]
+            if start < end:
+                f.write(" ".join(str(neighbors[k]) for k in range(start, end)))
+            f.write("\n")
+
+
 def all_pairs(n: int) -> str:
     return "\n".join(f"{u} {v}" for u, v in combinations(range(n), 2)) + "\n"
+
+
+def sampled_pairs(n: int, k: int, seed: int) -> str:
+    """Sample k distinct unordered pairs (u, v) with u < v, uniformly at random.
+
+    Used for the large-tier workloads where the graph has so many
+    vertices that an all-pairs enumeration (C(n, 2) lines) would be
+    larger than the graph itself and would make the VCP enumeration run
+    effectively forever. A fixed sample gives a representative,
+    bounded-cost workload.
+    """
+    if k > n * (n - 1) // 2:
+        raise ValueError(f"k={k} exceeds number of distinct pairs for n={n}")
+    rng = random.Random(seed)
+    pairs: set[tuple[int, int]] = set()
+    while len(pairs) < k:
+        u = rng.randrange(n)
+        v = rng.randrange(n)
+        if u == v:
+            continue
+        if u > v:
+            u, v = v, u
+        pairs.add((u, v))
+    return "\n".join(f"{u} {v}" for u, v in sorted(pairs)) + "\n"
 
 
 def write(path: Path, content: str) -> None:
@@ -153,16 +280,7 @@ def bit_assigner_factory(seed: int):
     return f
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--output-dir", type=Path, default=Path(__file__).parent / "fixtures"
-    )
-    args = parser.parse_args()
-
-    out = args.output_dir
-    out.mkdir(parents=True, exist_ok=True)
-
+def generate_small(out: Path) -> None:
     # Workloads tuned so each vcp_generate(4,r,d) all-pairs run is ~0.5-5 s
     # on modern code; legacy is typically slower. Sizes are a compromise
     # between "slow enough to time reliably" and "fast enough that a full
@@ -204,6 +322,122 @@ def main() -> None:
             g.to_multirelational_text(bit_assigner_factory(seed + 1)),
         )
         write(out / "pairs" / f"mr_{name}.pairs", all_pairs(n))
+
+
+# --- Large-tier fixtures ---
+#
+# The large tier is opt-in (via --large or run.sh --large) because it
+# generates a ~300 MB undirected graph and a ~600 MB directed graph and
+# takes a few minutes to produce. It is scoped to the four unirelational
+# VCP procedures - 3/4-vertex, undirected/directed - because:
+#
+#   * Multirelational fixtures must be dense to dodge the legacy
+#     missing-edge bug (edge_value reads OOB on absent edges), and
+#     density is incompatible with a 10M-node sparse workload.
+#   * Auxiliary tools (directed_to_undirected, ell_2_pairs) are
+#     already I/O-bounded in the small tier; scaling up adds no new
+#     signal.
+#
+# Ratio n:m is set by LARGE_AVG_DEGREE, mapped to Bernoulli p via
+# p = avg_deg / (n - 1). Pair sample count is fixed at
+# LARGE_PAIR_SAMPLE; at avg degree 5 this yields runtimes on the order
+# of seconds to low minutes on modern code, which is both tractable for
+# a benchmark sweep and large enough for the per-pair enumeration work
+# to dominate the graph parse and measure meaningfully.
+LARGE_N = 10_000_000
+LARGE_AVG_DEGREE = 5
+LARGE_PAIR_SAMPLE = 100_000
+LARGE_SEED = 42
+
+
+def _large_p() -> float:
+    return LARGE_AVG_DEGREE / (LARGE_N - 1)
+
+
+def _large_names() -> tuple[str, str, str]:
+    stem = f"n{LARGE_N}_d{LARGE_AVG_DEGREE}_s{LARGE_SEED}"
+    return (
+        f"er_{stem}.txt",
+        f"dsym_{stem}.txt",
+        f"sample_{stem}_k{LARGE_PAIR_SAMPLE}.pairs",
+    )
+
+
+def generate_large(out: Path) -> None:
+    """Emit the large-tier fixtures via the streaming unified procedure.
+
+    Idempotent: files that already exist on disk are left alone, so
+    ``run.sh --large`` on a repeat invocation is a no-op.
+
+    The directed-bidirectional fixture is hardlinked from the
+    undirected one because the two file representations are
+    byte-identical - see :func:`stream_er_sparse`. A hardlink saves
+    ~400 MB of disk and a whole generation pass while keeping the
+    benchmark's two filenames semantically distinct.
+    """
+    undirected_name, directed_name, pairs_name = _large_names()
+    p = _large_p()
+
+    undirected_path = out / "undirected" / undirected_name
+    directed_path = out / "directed" / directed_name
+    pairs_path = out / "pairs" / pairs_name
+
+    if undirected_path.exists():
+        print(f"   (exists) {undirected_path.name}")
+    else:
+        print(
+            f"   generating {undirected_path.name} "
+            f"(n={LARGE_N:,}, avg_deg={LARGE_AVG_DEGREE}, p={p:.2e})"
+        )
+        stream_er_sparse(LARGE_N, p, LARGE_SEED, undirected_path)
+
+    if directed_path.exists():
+        print(f"   (exists) {directed_path.name}")
+    else:
+        print(
+            f"   hardlinking {directed_path.name} "
+            f"(byte-identical to {undirected_path.name})"
+        )
+        directed_path.parent.mkdir(parents=True, exist_ok=True)
+        os.link(undirected_path, directed_path)
+
+    if pairs_path.exists():
+        print(f"   (exists) {pairs_path.name}")
+    else:
+        print(f"   generating {pairs_path.name} (k={LARGE_PAIR_SAMPLE:,})")
+        write(pairs_path, sampled_pairs(LARGE_N, LARGE_PAIR_SAMPLE, LARGE_SEED + 1))
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--output-dir", type=Path, default=Path(__file__).parent / "fixtures"
+    )
+    parser.add_argument(
+        "--large",
+        action="store_true",
+        help=(
+            "Also generate the large-tier fixtures "
+            f"(n={LARGE_N:,}, avg_deg={LARGE_AVG_DEGREE}). "
+            "Takes several minutes and produces ~900 MB on disk."
+        ),
+    )
+    parser.add_argument(
+        "--only-large",
+        action="store_true",
+        help="Skip the small tier; only generate the large-tier fixtures.",
+    )
+    args = parser.parse_args()
+
+    out = args.output_dir
+    out.mkdir(parents=True, exist_ok=True)
+
+    if not args.only_large:
+        generate_small(out)
+
+    if args.large or args.only_large:
+        print(">> Large-tier fixtures")
+        generate_large(out)
 
 
 if __name__ == "__main__":

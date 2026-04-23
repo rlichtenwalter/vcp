@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Large-tier benchmark workload (`./benchmark/run.sh --large`) on a 10M-node avg-degree-5 sparse ER graph, exercising the four unirelational VCP procedures (3/4 × undirected/directed). Graph generation uses a streaming CSR-flat procedure in `benchmark/generate_fixtures.py` that scales with edge count instead of vertex² (the naive `list[set[int]]` adjacency OOM-killed at this scale on a 15 GB box). The directed-bidirectional fixture is hardlinked from the undirected one because the on-disk representation is byte-identical, saving 400 MB and a full generation pass.
+- `regression/run.sh` Phase L auto-detects the benchmark's large fixture and runs legacy-vs-current byte-diff consistency checks on the same 10M-node graph. Known divergence on `vcp 4 1 1` (legacy has an unfixed underflow) is encoded as an expected result; identical output on 3/4 × {undirected, directed} is the PASS criterion.
 - Benchmark suite under `benchmark/` with two layers:
   - Cross-ref tool-level runner (`benchmark/run.sh`) that builds arbitrary git revisions in isolated worktrees, times the CLI tools against a curated set of seeded fixtures, and emits a markdown comparison table. Auto-detects legacy (Makefile) vs modern (CMake) build systems and prepends the 2012 baseline commit by default so current-branch performance can be measured directly against the original GitHub state.
   - Catch2 library-level micro-benchmarks (`benchmark/bench_vcp.cpp`) gated on the new `VCP_BUILD_BENCHMARKS` CMake option, mirroring the `bench_kdtree.cpp` / `bench_mrmr.cpp` pattern in sibling libraries.
