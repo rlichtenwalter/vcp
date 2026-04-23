@@ -248,7 +248,11 @@ bool multirelational_directed_graph<r>::edge_exists(const_edge_iterator it) cons
 template <std::size_t r>
 typename multirelational_directed_graph<r>::connectivity_address_type
 multirelational_directed_graph<r>::edge_value(const_edge_iterator it) const {
-  return edge_values[edge_id(it)];
+  // A non-existent edge has connectivity value 0 (unconnected), matching the
+  // contract of graph::edge_value / directed_graph::edge_value. Callers such
+  // as vcp::edge_value() pipe out_edge()/in_edge() directly here without a
+  // null check. Both return in_edges_end() when no edge is found.
+  return it == in_edges_end() ? 0 : edge_values[edge_id(it)];
 }
 
 template <std::size_t r>
