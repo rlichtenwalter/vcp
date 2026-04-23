@@ -205,17 +205,16 @@ inline bool directed_graph::in_edge_exists(const_vertex_iterator source,
 }
 
 inline std::ostream &operator<<(std::ostream &os, directed_graph const &g) {
-  for (const_vertex_iterator vIt(g.vertices_begin()); vIt < g.vertices_end(); ++vIt) {
-    const_edge_iterator nIt(g.out_neighbors_begin(vIt));
-    while (nIt < g.out_neighbors_end(vIt) - 1) {
-      os << g.vertex_id(g.target_of(nIt++)) << ' ';
+  for (const_vertex_iterator vIt = g.vertices_begin(); vIt != g.vertices_end(); ++vIt) {
+    const_edge_iterator const nBegin = g.out_neighbors_begin(vIt);
+    const_edge_iterator const nEnd = g.out_neighbors_end(vIt);
+    for (const_edge_iterator nIt = nBegin; nIt != nEnd; ++nIt) {
+      if (nIt != nBegin) {
+        os << ' ';
+      }
+      os << g.vertex_id(g.target_of(nIt));
     }
-    if (nIt < g.out_neighbors_end(vIt)) {
-      os << g.vertex_id(g.target_of(nIt++));
-    }
-    if (vIt < g.vertices_end()) {
-      os << '\n';
-    }
+    os << '\n';
   }
   return os;
 }
