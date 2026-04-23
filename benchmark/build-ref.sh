@@ -57,9 +57,17 @@ echo "   output:   $BIN_OUT"
 REV_SHA="$(git -C "$REPO_ROOT" rev-parse --verify "$REV^{commit}")"
 
 # Idempotent: remove any stale worktree before creating a fresh one.
+# If the directory exists but is not a tracked worktree, fail loudly
+# rather than `rm -rf`ing an unrelated directory that happens to share
+# the name - the slug is sanitized but a typo in `bin/` or a leftover
+# from a manual experiment could otherwise be silently deleted.
 if [ -d "$WORKTREE_DIR" ]; then
     echo ">> Removing stale worktree at $WORKTREE_DIR"
-    git -C "$REPO_ROOT" worktree remove --force "$WORKTREE_DIR" 2>/dev/null || rm -rf "$WORKTREE_DIR"
+    if ! git -C "$REPO_ROOT" worktree remove --force "$WORKTREE_DIR"; then
+        echo "ERROR: $WORKTREE_DIR exists but is not a git worktree." >&2
+        echo "       Refusing to delete it automatically. Inspect and remove manually." >&2
+        exit 1
+    fi
 fi
 
 git -C "$REPO_ROOT" worktree add --detach "$WORKTREE_DIR" "$REV_SHA"

@@ -23,7 +23,14 @@ endif()
 
 add_executable(bench_vcp bench_vcp.cpp)
 target_link_libraries(bench_vcp PRIVATE vcp::vcp Catch2::Catch2WithMain)
+
+# Always optimize the benchmark binary, regardless of the parent build
+# type - benchmarks only make sense at -O3 -DNDEBUG. Use per-target
+# definitions/options rather than abusing -DNDEBUG as a compile flag, and
+# rely on the LINK_OPTIONS form so the Release linker flags (notably
+# -flto) do not get silently dropped when the parent is Debug.
+target_compile_definitions(bench_vcp PRIVATE NDEBUG)
 target_compile_options(bench_vcp PRIVATE
-    -O3 -DNDEBUG
+    -O3
     -Wall -Wextra -pedantic -Wno-unused-local-typedefs
 )

@@ -129,11 +129,17 @@ def write(path: Path, content: str) -> None:
 def bit_assigner_factory(seed: int):
     """Assign a small non-zero relation bitset to every edge deterministically.
 
-    Values in {1, 2, 3} - never 0, so every present edge has a non-trivial
-    multirelational connectivity value. This does not prevent the legacy
-    edge_value bug (which fires on MISSING edges), but keeping the
-    fixtures dense reduces the chance of a missing-edge lookup during
-    enumeration.
+    Values are in {1, 2, 3} - never 0, so every edge present in the
+    graph has a non-trivial multirelational connectivity value.
+
+    This function only writes entries for edges that exist. The legacy
+    edge_value bug fires on MISSING edges (i.e. VCP enumeration probing
+    an edge not in the file), which cannot be prevented at the fixture
+    layer. Keeping fixtures dense is a probabilistic mitigation: the
+    denser the graph, the smaller the chance that a 4-vertex subgraph
+    enumeration touches an unconnected pair. This is the reason the
+    multirelational fixtures below use p=0.30 at n=100 and p=0.15 at
+    n=200, far denser than the other workloads.
     """
     rng = random.Random(seed)
     cache: dict[tuple[int, int], int] = {}

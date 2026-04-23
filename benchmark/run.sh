@@ -33,6 +33,14 @@
 
 set -euo pipefail
 
+# The timing primitive below uses $EPOCHREALTIME (bash 5.0+). Guarding
+# here keeps the failure mode obvious - on older bash the variable
+# silently expands to empty and every timing would become 0.000.
+if [ "${BASH_VERSINFO[0]}" -lt 5 ]; then
+    echo "ERROR: bash 5+ required (for \$EPOCHREALTIME); found ${BASH_VERSION}" >&2
+    exit 2
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 FIXTURES_DIR="$SCRIPT_DIR/fixtures"
 RESULTS_ROOT="$SCRIPT_DIR/results"
@@ -57,6 +65,17 @@ while [[ $# -gt 0 ]]; do
         *) echo "Unknown option: $1" >&2; exit 2 ;;
     esac
 done
+
+# Require odd $RUNS. The median-of-N computation below selects the
+# ((N+1)/2)-th sorted value, which is the true median only when N is
+# odd; for even N it returns the lower of the two middle values, which
+# would be a silent misreport. Rather than averaging (ties in timing
+# measurements are essentially impossible anyway), enforce the
+# invariant.
+if (( RUNS < 1 || RUNS % 2 == 0 )); then
+    echo "ERROR: --runs must be a positive odd integer; got $RUNS" >&2
+    exit 2
+fi
 
 # Build the ref list. Legacy is prepended unless opted out so the common
 # case (compare current branch against the 2012 baseline) is one command.
@@ -130,7 +149,10 @@ _run_once() {
         124) echo "TIMEOUT" ;;
         *)   echo "CRASH-$rc" ;;
     esac
-    [ "$rc" -eq 0 ]
+    # The string output above IS the interface. Callers read the captured
+    # stdout; they do not test $? of this function. Return 0 unconditionally
+    # so a partial run does not trip set -e in the outer shell.
+    return 0
 }
 
 # _collect_runs <label> <slug> <input_file> <cmd...>
