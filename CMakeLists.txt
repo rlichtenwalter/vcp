@@ -112,7 +112,16 @@ endforeach()
 # into the installed/exported targets that downstream consumers would
 # pick up via find_package(vcp).
 option(VCP_SANITIZE "Enable AddressSanitizer + UndefinedBehaviorSanitizer in Debug builds" OFF)
-set(VCP_SANITIZE_FLAGS $<$<BOOL:${VCP_SANITIZE}>:$<$<CONFIG:Debug>:-fsanitize=address,undefined;-fno-sanitize-recover=all;-fno-omit-frame-pointer>>)
+# Each flag is its own generator expression. Bundling them into a single
+# genex with semicolon separators happens to expand correctly on Ninja +
+# GNU Make with GCC today, but the behavior depends on how each generator
+# splits the genex output into argv entries - a multi-element list form
+# is specified and portable.
+set(VCP_SANITIZE_FLAGS
+    $<$<BOOL:${VCP_SANITIZE}>:$<$<CONFIG:Debug>:-fsanitize=address,undefined>>
+    $<$<BOOL:${VCP_SANITIZE}>:$<$<CONFIG:Debug>:-fno-sanitize-recover=all>>
+    $<$<BOOL:${VCP_SANITIZE}>:$<$<CONFIG:Debug>:-fno-omit-frame-pointer>>
+)
 foreach(tool IN LISTS VCP_TOOLS)
     target_compile_options(${tool} PRIVATE ${VCP_SANITIZE_FLAGS})
     target_link_options(${tool}    PRIVATE ${VCP_SANITIZE_FLAGS})
