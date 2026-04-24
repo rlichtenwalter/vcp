@@ -533,19 +533,20 @@ std::array<unsigned long, vcp<4, 1, true>::element_count()> const inline vcp<
       }
       if (min.first == v3_in_neighbors_end || g.target_of(min.first) > it2->first) {
         if (it1->first < it2->first) {
-          unsigned short temp(it2->second - v1v2);
-          std::size_t contrib(0);
-          contrib += V1V4 * (temp % V2V3);
-          contrib += V2V4 * (temp / V2V3);
+          // it2 was stored in its v3 role with V1V3/V2V3 bits; promoting it to
+          // v4 requires re-encoding those same connectivity values into the
+          // V1V4/V2V4 slots. The equivalence `4 * temp == V1V4 * c13 + V2V4 *
+          // c23` holds because V1V4 / V1V3 == V2V4 / V2V3 == 4 — the per-slot
+          // stride for (r=1, d=1) — so a single shift suffices. The explicit
+          // form is `V1V4 * ((temp % V2V3) / V1V3) + V2V4 * (temp / V2V3)`;
+          // use that form if the enum layout ever changes.
+          std::size_t contrib(4 * (it2->second - v1v2));
           ++gaps;
           ++counts[element_address(it1->second + contrib)];
         }
       } else {
         if (it1->first < it2->first) {
-          unsigned short temp(it2->second - v1v2);
-          std::size_t contrib(0);
-          contrib += V1V4 * (temp % V2V3);
-          contrib += V2V4 * (temp / V2V3);
+          std::size_t contrib(4 * (it2->second - v1v2));
           ++connections;
           if (min.second < 3) {
             ++amutuals;
@@ -573,12 +574,19 @@ std::array<unsigned long, vcp<4, 1, true>::element_count()> const inline vcp<
     counts[element_address(it1->second)] += g.vertex_count() - 2 - v3_count - v4_local_count;
   }
 
-  // account for the least connected substructures
+  // Account for the least connected substructures: slots where {v3, v4} are
+  // both in V \ ({v1, v2} ∪ Γ(v1) ∪ Γ(v2)) and thus unreachable by the
+  // enumeration above. For each of the three v3v4 connectivity classes
+  // (asymmetric, mutual, unconnected) the count is (global pairs of this
+  // class) − (observed pairs of this class) − (1 iff v1v2 itself belongs to
+  // this class). The three classes partition V×V, so exactly one of the
+  // three corrections fires per (v1, v2). OUT and IN v3v4 map to the same
+  // VCP element (v3, v4 are unlabeled), so the asymmetric slot is written
+  // once at OUT * V3V4.
   counts[element_address(v1v2 + OUT * V3V4)] =
-      this->amutualPairs -
-      (amutuals + static_cast<bool>(v1v2)); // out and in versions are isomorphically equivalent and
-                                            // do not need to be counted separately
-  counts[element_address(v1v2 + BOTH * V3V4)] = this->mutualPairs - (connections - amutuals);
+      this->amutualPairs - amutuals - static_cast<bool>(v1v2 == OUT || v1v2 == IN);
+  counts[element_address(v1v2 + BOTH * V3V4)] =
+      this->mutualPairs - (connections - amutuals) - static_cast<bool>(v1v2 == BOTH);
   counts[element_address(v1v2)] = unconnected_pairs - (gaps + !static_cast<bool>(v1v2)) -
                                   (2 + v3_count) * (g.vertex_count() - 2 - v3_count) + 3 * v4_count;
 

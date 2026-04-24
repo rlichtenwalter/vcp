@@ -82,6 +82,7 @@ set(VCP_TOOLS
     vcp_map
     directed_to_undirected
     ell_2_pairs
+    vcp_gen_er_fixture
 )
 
 foreach(tool IN LISTS VCP_TOOLS)

@@ -17,12 +17,20 @@
 #
 # Usage:
 #   ./run.sh [--refs REVSPEC[,REVSPEC...]] [--runs N] [--timeout SEC]
-#            [--skip-build] [--no-legacy]
+#            [--skip-build] [--no-legacy] [--large]
 #
 # Defaults:
 #   --refs "develop"      one ref (legacy added implicitly unless --no-legacy)
 #   --runs 3              repetitions per workload per ref
-#   --timeout 300         per-invocation wall-clock seconds
+#   --timeout 300         per-invocation wall-clock seconds (1800 with --large)
+#
+# --large:
+#   Append four extra workloads on a 10M-node avg-degree-5 sparse ER
+#   graph (vcp 3/4 x undirected/directed, unirelational). The large
+#   tier fixture is ~900 MB and generated on first use (~2-3 minutes);
+#   per-workload runtime is on the order of seconds to low minutes on
+#   modern code. Legacy may CRASH or TIMEOUT at this scale; that is
+#   reported, not a fatal error.
 #
 # Output:
 #   results/<timestamp>/comparison.md    comparison table
@@ -48,9 +56,10 @@ RESULTS_ROOT="$SCRIPT_DIR/results"
 # --- Arg parsing ---
 REFS_ARG="develop"
 RUNS=3
-TIMEOUT=300
+TIMEOUT=""
 SKIP_BUILD=0
 NO_LEGACY=0
+LARGE=0
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -59,12 +68,26 @@ while [[ $# -gt 0 ]]; do
         --timeout)    TIMEOUT="$2";  shift 2 ;;
         --skip-build) SKIP_BUILD=1;  shift ;;
         --no-legacy)  NO_LEGACY=1;   shift ;;
+        --large)      LARGE=1;       shift ;;
         -h|--help)
-            sed -n '2,32p' "$0" | sed 's/^# \{0,1\}//'
+            sed -n '2,40p' "$0" | sed 's/^# \{0,1\}//'
             exit 0 ;;
         *) echo "Unknown option: $1" >&2; exit 2 ;;
     esac
 done
+
+# If --timeout was not given, pick a default that is appropriate for the
+# selected workload tier. The 10M-node tier deliberately admits
+# per-workload runtimes on the order of a minute or two; a 300 s cap
+# there would convert signal ("legacy is slow but finishes") into noise
+# ("legacy TIMEOUTs on everything").
+if [ -z "$TIMEOUT" ]; then
+    if [ "$LARGE" -eq 1 ]; then
+        TIMEOUT=1800
+    else
+        TIMEOUT=300
+    fi
+fi
 
 # Require odd $RUNS. The median-of-N computation below selects the
 # ((N+1)/2)-th sorted value, which is the true median only when N is
@@ -88,6 +111,40 @@ fi
 if [ ! -d "$FIXTURES_DIR/undirected" ]; then
     echo ">> Generating fixtures"
     python3 "$SCRIPT_DIR/generate_fixtures.py"
+fi
+
+# Large-tier fixtures (opt-in, ~400 MB hardlinked, generated idempotently
+# by the C++ tool `vcp_gen_er_fixture`). Built alongside the other CLI
+# tools; any ref's build tree will have its own copy under bin/<slug>/.
+# We use the current branch's copy for generation since fixtures are
+# not ref-dependent.
+LARGE_UNDIRECTED="$FIXTURES_DIR/undirected/er_n10000000_d5_s42.txt"
+LARGE_DIRECTED="$FIXTURES_DIR/directed/dsym_n10000000_d5_s42.txt"
+LARGE_PAIRS="$FIXTURES_DIR/pairs/sample_n10000000_d5_s42_k100000.pairs"
+if [ "$LARGE" -eq 1 ]; then
+    if [ ! -f "$LARGE_UNDIRECTED" ] \
+       || [ ! -f "$LARGE_DIRECTED" ] \
+       || [ ! -f "$LARGE_PAIRS" ]; then
+        echo ">> Generating large-tier fixtures"
+        # Find the generator binary: prefer the current-branch slug's bin
+        # tree (built alongside the benchmark refs), otherwise fall back
+        # to the top-level build/ used for interactive development.
+        GEN_BIN=""
+        for candidate in \
+            "$SCRIPT_DIR/bin/${SLUGS[${#SLUGS[@]}-1]}/vcp_gen_er_fixture" \
+            "$SCRIPT_DIR/../build/vcp_gen_er_fixture"; do
+            if [ -x "$candidate" ]; then
+                GEN_BIN="$candidate"
+                break
+            fi
+        done
+        if [ -z "$GEN_BIN" ]; then
+            echo "ERROR: could not find vcp_gen_er_fixture binary." >&2
+            echo "       Build it with: cmake --build build -j" >&2
+            exit 2
+        fi
+        "$GEN_BIN" -n 10000000 -d 5 -s 42 -k 100000 -o "$FIXTURES_DIR"
+    fi
 fi
 
 # --- Slug derivation (must match build-ref.sh) ---
@@ -350,6 +407,31 @@ run_workload "ell_2_pairs n=1000" stdin ell_2_pairs \
 
 run_workload "ell_2_pairs n=2000" stdin ell_2_pairs \
     "$FIXTURES_DIR/undirected/er_n2000_p0.01_s42.txt"
+
+# --- Large tier (opt-in via --large) ---
+# One 10M-node avg-degree-5 sparse ER graph, shared across the four
+# unirelational VCP procedures. Uses a 100k-sample pair file instead of
+# all-pairs (which would be ~5e13 pairs at this scale). Legacy may
+# CRASH or TIMEOUT here; that is reported, not fatal.
+if [ "$LARGE" -eq 1 ]; then
+    echo ">> Running large-tier workloads (n=10M, avg_deg=5)" >&2
+
+    run_workload "vcp_gen 3 1 0 n=10M"  pipe vcp_generate \
+        "$LARGE_PAIRS" \
+        3 1 0 "$LARGE_UNDIRECTED"
+
+    run_workload "vcp_gen 4 1 0 n=10M"  pipe vcp_generate \
+        "$LARGE_PAIRS" \
+        4 1 0 "$LARGE_UNDIRECTED"
+
+    run_workload "vcp_gen 3 1 1 n=10M"  pipe vcp_generate \
+        "$LARGE_PAIRS" \
+        3 1 1 "$LARGE_DIRECTED"
+
+    run_workload "vcp_gen 4 1 1 n=10M"  pipe vcp_generate \
+        "$LARGE_PAIRS" \
+        4 1 1 "$LARGE_DIRECTED"
+fi
 
 # Footer
 {

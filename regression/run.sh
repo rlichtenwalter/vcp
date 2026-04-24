@@ -329,6 +329,149 @@ for fixture_path in "$FIXTURES_DIR"/graphs_undirected/*.txt; do
 done
 
 # =============================================================================
+# Phase 6 — VCP_{4,1,1} invariant validation on Bug-2 coverage fixtures
+# =============================================================================
+#
+# Unlike Phases 2–5 (byte-for-byte legacy-vs-current diffs), this phase
+# validates absolute correctness by parsing vcp_generate outputs and
+# asserting three invariants per pair:
+#   (1) sum(counts) == C(V-2, 2)      [catches Defect A/B]
+#   (2) max(counts) <= C(V-2, 2)      [catches underflow]
+#   (3) counts[expected_elem] == 1    [catches Defect C, V=4 only]
+#
+# The assertions are independent of any reference build, so they remain
+# meaningful even when the legacy build contains known defects. The phase
+# runs both builds in parallel so either side can be identified as faulty.
+echo
+echo "=== Phase 6: VCP_{4,1,1} invariant validation (legacy and current) ==="
+{
+    echo
+    echo "## Phase 6 — VCP_{4,1,1} invariant validation (Bug-2 fixtures)"
+    echo
+    echo "Absolute-correctness checks (not a legacy-vs-current diff). See"
+    echo "\`regression/validate_bug2_invariants.py\` for the assertion semantics."
+    echo
+    echo "| Build | Result |"
+    echo "|---|---|"
+} >> "$REPORT"
+
+for build_tag in legacy current; do
+    build_bin="$SCRIPT_DIR/bin/$build_tag"
+    if [ ! -x "$build_bin/vcp_generate" ] || [ ! -x "$build_bin/vcp_map" ]; then
+        echo "| $build_tag | SKIP (binaries missing) |" >> "$REPORT"
+        SKIP_COUNT=$((SKIP_COUNT + 1))
+        continue
+    fi
+    if python3 "$SCRIPT_DIR/validate_bug2_invariants.py" \
+        --bin "$build_bin" \
+        --fixtures "$FIXTURES_DIR" \
+        >> "$RESULTS_DIR/bug2_invariants_${build_tag}.txt" 2>&1
+    then
+        echo "| $build_tag | PASS |" >> "$REPORT"
+        pass "bug2_invariants $build_tag"
+    else
+        echo "| $build_tag | FAIL |" >> "$REPORT"
+        fail "bug2_invariants $build_tag (see results/bug2_invariants_${build_tag}.txt)"
+    fi
+done
+
+# =============================================================================
+# Phase L — Large-tier sparse consistency (optional, auto-detected)
+# =============================================================================
+#
+# Reuses the benchmark suite's 10M-node avg-degree-5 sparse ER fixture
+# (benchmark/fixtures/{undirected,directed,pairs}/...). These files are
+# only present when the benchmark has been run at least once with
+# --large; when absent this phase is skipped with a single SKIP note.
+#
+# Unlike the small committed regression fixtures, the large fixture
+# exercises parse scaling and cache behavior on graphs that are
+# representative of real link-prediction workloads. All four
+# unirelational VCP procedures are compared byte-for-byte between the
+# two builds.
+#
+# Known divergence: vcp_generate 4 1 1 will differ because legacy
+# contains an unfixed underflow (see CHANGELOG / fix/vcp-4-1-1-underflow).
+# That divergence is expected - match would be a regression of the fix.
+echo
+echo "=== Phase L: large-tier sparse consistency (10M nodes, avg_deg=5) ==="
+BENCH_FIXTURES="$SCRIPT_DIR/../benchmark/fixtures"
+LARGE_UNDIRECTED="$BENCH_FIXTURES/undirected/er_n10000000_d5_s42.txt"
+LARGE_DIRECTED="$BENCH_FIXTURES/directed/dsym_n10000000_d5_s42.txt"
+LARGE_PAIRS="$BENCH_FIXTURES/pairs/sample_n10000000_d5_s42_k100000.pairs"
+
+{
+    echo
+    echo "## Phase L — Large-tier sparse consistency"
+    echo
+    echo "10M-node avg-degree-5 sparse ER fixture shared with the benchmark"
+    echo "suite (\`benchmark/fixtures/\`). Skipped if the fixture is absent;"
+    echo "generate with \`cd benchmark && ./run.sh --large\` (which"
+    echo "shells out to the \`vcp_gen_er_fixture\` C++ tool)."
+    echo
+} >> "$REPORT"
+
+if [ ! -f "$LARGE_UNDIRECTED" ] || [ ! -f "$LARGE_DIRECTED" ] || [ ! -f "$LARGE_PAIRS" ]; then
+    echo "| Status | SKIP (large fixture not generated) |" >> "$REPORT"
+    skip "large tier (fixture missing; run benchmark/run.sh --large to generate)"
+else
+    {
+        echo "| Scenario | Legacy | Current | Result |"
+        echo "|---|---|---|---|"
+    } >> "$REPORT"
+    for spec in "3 1 0 undirected" "4 1 0 undirected" "3 1 1 directed" "4 1 1 directed"; do
+        read -r n r d kind <<< "$spec"
+        case "$kind" in
+            undirected) graph="$LARGE_UNDIRECTED" ;;
+            directed)   graph="$LARGE_DIRECTED" ;;
+        esac
+        tag="large_${n}_${r}_${d}"
+        legacy_out="$RESULTS_DIR/characterization/legacy_vcp_generate_${tag}.txt"
+        current_out="$RESULTS_DIR/characterization/current_vcp_generate_${tag}.txt"
+
+        # Don't let set -e swallow a legacy crash - we want to see and report it.
+        legacy_rc=0
+        "$LEGACY_BIN/vcp_generate" "$n" "$r" "$d" "$graph" \
+            < "$LARGE_PAIRS" > "$legacy_out" 2>/dev/null || legacy_rc=$?
+        current_rc=0
+        "$CURRENT_BIN/vcp_generate" "$n" "$r" "$d" "$graph" \
+            < "$LARGE_PAIRS" > "$current_out" 2>/dev/null || current_rc=$?
+
+        legacy_label="OK"
+        [ "$legacy_rc" -ne 0 ] && legacy_label="CRASH-$legacy_rc"
+        current_label="OK"
+        [ "$current_rc" -ne 0 ] && current_label="CRASH-$current_rc"
+
+        # vcp 4 1 1 must diverge: legacy has the unfixed underflow.
+        expect_diverge=0
+        if [ "$n" = "4" ] && [ "$r" = "1" ] && [ "$d" = "1" ]; then
+            expect_diverge=1
+        fi
+
+        if [ "$legacy_rc" -ne 0 ] || [ "$current_rc" -ne 0 ]; then
+            echo "| \`vcp_generate $n $r $d\` | $legacy_label | $current_label | FAIL (non-zero exit) |" >> "$REPORT"
+            fail "large/$tag (legacy=$legacy_label, current=$current_label)"
+        elif cmp -s "$legacy_out" "$current_out"; then
+            if [ "$expect_diverge" -eq 1 ]; then
+                echo "| \`vcp_generate $n $r $d\` | $legacy_label | $current_label | FAIL (match, but 4 1 1 legacy underflow should diverge) |" >> "$REPORT"
+                fail "large/$tag: expected divergence but outputs match"
+            else
+                echo "| \`vcp_generate $n $r $d\` | $legacy_label | $current_label | PASS |" >> "$REPORT"
+                pass "large/$tag"
+            fi
+        else
+            if [ "$expect_diverge" -eq 1 ]; then
+                echo "| \`vcp_generate $n $r $d\` | $legacy_label | $current_label | PASS (diverged as expected: legacy 4 1 1 underflow) |" >> "$REPORT"
+                pass "large/$tag (diverged as expected)"
+            else
+                echo "| \`vcp_generate $n $r $d\` | $legacy_label | $current_label | FAIL (unexpected divergence) |" >> "$REPORT"
+                fail "large/$tag: unexpected divergence"
+            fi
+        fi
+    done
+fi
+
+# =============================================================================
 # Summary
 # =============================================================================
 TOTAL=$((PASS_COUNT + FAIL_COUNT + SKIP_COUNT))
