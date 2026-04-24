@@ -334,7 +334,7 @@ vcp<4, r, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
           it1->second(1, 3) = it2->second(1, 2);
           it1->second(3, 1) = it2->second(2, 1);
           it1->second(2, 3) = min.second.first;
-          it1->second(3, 3) = min.second.second;
+          it1->second(3, 2) = min.second.second;
           ++counts.insert(std::make_pair(mapper.canonical_subgraph_address(it1->second), 0))
                 .first->second;
         }
@@ -376,6 +376,9 @@ vcp<4, r, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
         g.vertex_count() - 2 - ((v3Vertices_end - v3Vertices_begin) + v4_local_count);
   }
 
+  // v1v2's own directionality class, sorted (lo, hi) to match edge_types keys.
+  connectivity_address_type const v1v2_lo(std::min(connectivity(0, 1), connectivity(1, 0)));
+  connectivity_address_type const v1v2_hi(std::max(connectivity(0, 1), connectivity(1, 0)));
   for (typename std::map<std::pair<connectivity_address_type, connectivity_address_type>,
                          unsigned long>::const_iterator it(edge_types.begin());
        it != edge_types.end(); ++it) {
@@ -389,9 +392,21 @@ vcp<4, r, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
     if (temp_it != temp_edge_types.end()) {
       count -= temp_it->second;
       if (it->first.first == 0 && it->first.second == 0) {
+        // For the unconnected class, !bool(c01+c10) is 1 iff v1v2 is itself
+        // unconnected — the self-correction for that class. The trailing
+        // terms subtract pairs that can never be enumerated (both endpoints
+        // in V \ ({v1,v2} ∪ Γ(v1) ∪ Γ(v2))).
         count -= !static_cast<bool>(connectivity(0, 1) + connectivity(1, 0)) +
                  (2 + v3_count) * (g.vertex_count() - 2 - v3_count) - 3 * v4_count;
       }
+    }
+    // Self-correction for non-unconnected classes: edge_types counts v1v2
+    // itself if it has any directedness, so when the current class matches
+    // v1v2's own class, subtract 1. The unconnected class handles its own
+    // self-correction above via !bool(c01+c10).
+    if ((it->first.first != 0 || it->first.second != 0) && it->first.first == v1v2_lo &&
+        it->first.second == v1v2_hi) {
+      count -= 1;
     }
     counts.insert(std::make_pair(mapper.canonical_subgraph_address(connectivity), 0))
         .first->second += count;

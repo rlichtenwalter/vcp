@@ -25,6 +25,7 @@ endfunction()
 
 vcp_add_catch_test(test_placeholder)
 vcp_add_catch_test(test_vcp_4_r_0)
+vcp_add_catch_test(test_vcp_4_r_1)
 
 # --- CLI smoke tests ---
 # Each tool responds to --version and --help. These verify CLI11 wiring and
