@@ -24,6 +24,7 @@ function(vcp_add_catch_test name)
 endfunction()
 
 vcp_add_catch_test(test_placeholder)
+vcp_add_catch_test(test_square_matrix)
 vcp_add_catch_test(test_vcp_4_r_0)
 vcp_add_catch_test(test_vcp_4_r_1)
 
