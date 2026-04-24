@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - CLI `--version` output for each tool, sourced from VERSION via CMake
 
 ### Changed
+- `vcp<4, 1, false>::generate_vector` hot path — replaced a chained-equality V3→V4 role re-encoding (two `it2->second == v1v2 + V*V3` equality tests per inner iteration) with the direct stride-based form `(it2->second - v1v2) << 2`. The two are exactly equivalent because `V1V4/V1V3 == V2V4/V2V3 == 4` — the per-slot stride for the `(r = 1, d = 0)` `connectivity_value` enum layout — so shifting the V1V3/V2V3 bits left by 2 lands them in V1V4/V2V4 slots for all three cases (V1V3-only, V2V3-only, both). Matches the stride form already in `vcp_4_1_1.hpp:543`. Benchmarked as no regression / slight improvement on the large-tier 10M-node sparse ER workload.
 - `VCP_SANITIZE` now enables AddressSanitizer **and** UndefinedBehaviorSanitizer (previously only ASan), applies to every built target (tools, tests, benchmarks — previously only CLI tools), and passes `-fno-sanitize-recover=all` so every sanitizer diagnostic is a hard error. The new CI `sanitize` job builds this configuration and runs the test suite on every PR.
 - **BREAKING**: Move headers from `inc/vcp/` to `include/vcp/` (use `#include <vcp/vcp.hpp>`)
 - **BREAKING**: Move CLI tool sources from `src/` to `tools/` following header-only library conventions

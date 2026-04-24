@@ -168,21 +168,22 @@ std::array<unsigned long, vcp<4, 1, false>::element_count()> const inline vcp<
         if (it1->first < it2->first) { // to be a candidate vertex, the other v3 vertex must be
                                        // greater to avoid double counting
           ++gaps;
-          ++counts[element_address(it1->second +
-                                   (it2->second == v1v2 + V1V3
-                                        ? V1V4
-                                        : (it2->second == v1v2 + V2V3 ? V2V4 : V1V4 + V2V4)))];
+          // it2->second carries V1V3/V2V3 bits; promoting to v4-role requires
+          // re-encoding into V1V4/V2V4 slots. The equivalence
+          // `(it2->second - v1v2) << 2` holds because V1V4/V1V3 == V2V4/V2V3 == 4
+          // — the per-slot stride for (r=1, d=0) — so a single shift covers all
+          // three cases (V1V3-only → V1V4, V2V3-only → V2V4, both → V1V4+V2V4).
+          // This matches the stride-based form used in vcp_4_1_1.hpp. If the
+          // connectivity_value enum layout ever changes, replace with the
+          // explicit form `V1V4 * ((it2->second - v1v2) / V1V3) + ...`.
+          ++counts[element_address(it1->second + ((it2->second - v1v2) << 2))];
         }
       } else { // there is an edge between the v3 vertex and the other v3 vertex serving as a v4
                // vertex
         if (it1->first < it2->first) { // to be a candidate vertex, the other v3 vertex must be
                                        // greater to avoid double counting
           ++connections;
-          ++counts[element_address(it1->second +
-                                   (it2->second == v1v2 + V1V3
-                                        ? V1V4
-                                        : (it2->second == v1v2 + V2V3 ? V2V4 : V1V4 + V2V4)) +
-                                   V3V4)];
+          ++counts[element_address(it1->second + ((it2->second - v1v2) << 2) + V3V4)];
         }
         ++v3_neighbors_it;
       }
