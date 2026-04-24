@@ -23,9 +23,14 @@ Profiles code base. If not, see <http://www.gnu.org/licenses/>.
 #include <cstddef>
 #include <map>
 #include <utility>
+#include <vcp/detail/dense_or_sparse_map.hpp>
 #include <vcp/multirelational_directed_graph.hpp>
 #include <vcp/square_matrix.hpp>
 #include <vcp/vcp_dynamic_mapper.hpp>
+
+#ifdef VCP_INSTRUMENT_K
+#include <k_probe.hpp>
+#endif
 
 namespace vcp {
 
@@ -42,10 +47,23 @@ public:
 
 private:
   using connectivity_matrix = square_matrix<connectivity_address_type, 4>;
+  // Edge-types map: key is a sorted (lo, hi) pair of r-bit connectivity
+  // addresses (the directed edge's out/in classes), so the effective
+  // bit count is 2r and the total key space is 2^(2r). For small r
+  // (r ≤ 10 at sizeof(unsigned long)=8) the dense tier fires via
+  // pack_pair_key_by_bits<r> packing; for larger r the sparse tier
+  // uses std::unordered_map keyed on the raw std::pair via pair_hash.
+  // See include/vcp/detail/dense_or_sparse_map.hpp.
+  using edge_key_type = std::pair<connectivity_address_type, connectivity_address_type>;
+  using edge_types_map = detail::dense_or_sparse_map<edge_key_type, unsigned long,
+                                                     detail::key_count_from_bits<2 * r>(),
+                                                     detail::pack_pair_key_by_bits<r>>;
   multirelational_directed_graph<r> const &g;
   vcp_dynamic_mapper<4, r, true> mapper;
-  std::map<std::pair<connectivity_address_type, connectivity_address_type>, unsigned long>
-      edge_types;
+  edge_types_map edge_types;
+  // temp_edge_types promoted to class member (see vcp_4_r_0.hpp for
+  // rationale). Cleared at the start of each generate_vector.
+  edge_types_map temp_edge_types;
   // Scratch buffer for v3 candidates accumulated during `generate_vector`.
   // Allocated once per instance, reused across every call — which makes
   // this class NOT thread-safe for shared-instance concurrent calls.
@@ -63,10 +81,12 @@ vcp<4, r, true>::vcp(multirelational_directed_graph<r> const &g)
     : g(g), mapper(),
       v3Vertices(std::unique_ptr<std::pair<const_vertex_iterator, connectivity_matrix>[]>(
           new std::pair<const_vertex_iterator, connectivity_matrix>[MAX_NEIGHBORS])) {
-  unsigned long &gaps(edge_types
-                          .insert(std::make_pair(std::make_pair(0, 0),
-                                                 g.vertex_count() * (g.vertex_count() - 1) / 2))
-                          .first->second);
+  // (0, 0) is the unconnected class — seed its count with the number
+  // of unordered pairs and decrement per real edge, same pattern as
+  // vcp_4_r_0's undirected ctor.
+  unsigned long &gaps(edge_types.insert_or_zero(
+      std::make_pair(connectivity_address_type(0), connectivity_address_type(0))));
+  gaps = g.vertex_count() * (g.vertex_count() - 1) / 2;
   for (const_vertex_iterator it(g.vertices_begin()); it != g.vertices_end(); ++it) {
     const_edge_iterator outIt = g.out_neighbors_begin(it);
     const_edge_iterator outEnd = g.out_neighbors_end(it);
@@ -80,33 +100,32 @@ vcp<4, r, true>::vcp(multirelational_directed_graph<r> const &g)
     }
     while (outIt != outEnd && inIt != inEnd) {
       if (g.target_of(outIt) < g.target_of(inIt)) {
-        ++edge_types.insert(std::make_pair(std::make_pair(0, g.edge_value(outIt)), 0))
-              .first->second;
+        ++edge_types.insert_or_zero(
+            std::make_pair(connectivity_address_type(0), g.edge_value(outIt)));
         --gaps;
         ++outIt;
       } else if (g.target_of(outIt) > g.target_of(inIt)) {
-        ++edge_types.insert(std::make_pair(std::make_pair(0, g.edge_value(inIt)), 0)).first->second;
+        ++edge_types.insert_or_zero(
+            std::make_pair(connectivity_address_type(0), g.edge_value(inIt)));
         --gaps;
         ++inIt;
       } else {
-        ++edge_types
-              .insert(std::make_pair(g.edge_value(outIt) < g.edge_value(inIt)
-                                         ? std::make_pair(g.edge_value(outIt), g.edge_value(inIt))
-                                         : std::make_pair(g.edge_value(inIt), g.edge_value(outIt)),
-                                     0))
-              .first->second;
+        ++edge_types.insert_or_zero(g.edge_value(outIt) < g.edge_value(inIt)
+                                        ? std::make_pair(g.edge_value(outIt), g.edge_value(inIt))
+                                        : std::make_pair(g.edge_value(inIt), g.edge_value(outIt)));
         --gaps;
         ++outIt;
         ++inIt;
       }
     }
     while (outIt != outEnd) {
-      ++edge_types.insert(std::make_pair(std::make_pair(0, g.edge_value(outIt)), 0)).first->second;
+      ++edge_types.insert_or_zero(
+          std::make_pair(connectivity_address_type(0), g.edge_value(outIt)));
       --gaps;
       ++outIt;
     }
     while (inIt != inEnd) {
-      ++edge_types.insert(std::make_pair(std::make_pair(0, g.edge_value(inIt)), 0)).first->second;
+      ++edge_types.insert_or_zero(std::make_pair(connectivity_address_type(0), g.edge_value(inIt)));
       --gaps;
       ++inIt;
     }
@@ -155,15 +174,15 @@ template <std::size_t r>
 std::map<typename vcp<4, r, true>::subgraph_address_type, unsigned long> const
 vcp<4, r, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator v2) {
   std::map<subgraph_address_type, unsigned long> counts;
-  std::map<std::pair<connectivity_address_type, connectivity_address_type>, unsigned long>
-      temp_edge_types;
+  // temp_edge_types is a class member; see header rationale. O(k) clear.
+  temp_edge_types.clear();
 
   connectivity_matrix connectivity;
   connectivity(0, 1) = g.edge_value(g.out_edge(v1, v2));
   connectivity(1, 0) = g.edge_value(g.in_edge(v1, v2));
 
-  unsigned long &gaps(
-      temp_edge_types.insert(std::make_pair(std::make_pair(0, 0), 0)).first->second);
+  unsigned long &gaps(temp_edge_types.insert_or_zero(
+      std::make_pair(connectivity_address_type(0), connectivity_address_type(0))));
 
   // compose ordered list of v3 candidates
   const_edge_iterator v1_out_neighbors_it(g.out_neighbors_begin(v1));
@@ -195,12 +214,10 @@ vcp<4, r, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
   while (min1.first != min1_exhausted_sentinel && min2.first != min2_exhausted_sentinel) {
     if (g.target_of(min1.first) < g.target_of(min2.first)) {
       if (g.target_of(min1.first) != v2) {
-        ++temp_edge_types
-              .insert(std::make_pair(min1.second.first < min1.second.second
-                                         ? std::make_pair(min1.second.first, min1.second.second)
-                                         : std::make_pair(min1.second.second, min1.second.first),
-                                     0))
-              .first->second;
+        ++temp_edge_types.insert_or_zero(
+            min1.second.first < min1.second.second
+                ? std::make_pair(min1.second.first, min1.second.second)
+                : std::make_pair(min1.second.second, min1.second.first));
         ++gaps;
         v3Vertices_end->first = g.target_of(min1.first);
         v3Vertices_end->second = connectivity;
@@ -212,12 +229,10 @@ vcp<4, r, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
                                 v1_in_neighbors_end);
     } else if (g.target_of(min1.first) > g.target_of(min2.first)) {
       if (g.target_of(min2.first) != v1) {
-        ++temp_edge_types
-              .insert(std::make_pair(min2.second.first < min2.second.second
-                                         ? std::make_pair(min2.second.first, min2.second.second)
-                                         : std::make_pair(min2.second.second, min2.second.first),
-                                     0))
-              .first->second;
+        ++temp_edge_types.insert_or_zero(
+            min2.second.first < min2.second.second
+                ? std::make_pair(min2.second.first, min2.second.second)
+                : std::make_pair(min2.second.second, min2.second.first));
         ++gaps;
         v3Vertices_end->first = g.target_of(min2.first);
         v3Vertices_end->second = connectivity;
@@ -229,18 +244,12 @@ vcp<4, r, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
                                 v2_in_neighbors_end);
     } else { // the next neighbor is shared by both v1 and v2, so it cannot be either and we do not
              // need to check to exclude it
-      ++temp_edge_types
-            .insert(std::make_pair(min1.second.first < min1.second.second
-                                       ? std::make_pair(min1.second.first, min1.second.second)
-                                       : std::make_pair(min1.second.second, min1.second.first),
-                                   0))
-            .first->second;
-      ++temp_edge_types
-            .insert(std::make_pair(min2.second.first < min2.second.second
-                                       ? std::make_pair(min2.second.first, min2.second.second)
-                                       : std::make_pair(min2.second.second, min2.second.first),
-                                   0))
-            .first->second;
+      ++temp_edge_types.insert_or_zero(min1.second.first < min1.second.second
+                                           ? std::make_pair(min1.second.first, min1.second.second)
+                                           : std::make_pair(min1.second.second, min1.second.first));
+      ++temp_edge_types.insert_or_zero(min2.second.first < min2.second.second
+                                           ? std::make_pair(min2.second.first, min2.second.second)
+                                           : std::make_pair(min2.second.second, min2.second.first));
       v3Vertices_end->first = g.target_of(min1.first);
       v3Vertices_end->second = connectivity;
       v3Vertices_end->second(0, 2) = min1.second.first;
@@ -256,12 +265,9 @@ vcp<4, r, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
   }
   while (min1.first != min1_exhausted_sentinel) {
     if (g.target_of(min1.first) != v2) {
-      ++temp_edge_types
-            .insert(std::make_pair(min1.second.first < min1.second.second
-                                       ? std::make_pair(min1.second.first, min1.second.second)
-                                       : std::make_pair(min1.second.second, min1.second.first),
-                                   0))
-            .first->second;
+      ++temp_edge_types.insert_or_zero(min1.second.first < min1.second.second
+                                           ? std::make_pair(min1.second.first, min1.second.second)
+                                           : std::make_pair(min1.second.second, min1.second.first));
       ++gaps;
       v3Vertices_end->first = g.target_of(min1.first);
       v3Vertices_end->second = connectivity;
@@ -274,12 +280,9 @@ vcp<4, r, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
   }
   while (min2.first != min2_exhausted_sentinel) {
     if (g.target_of(min2.first) != v1) {
-      ++temp_edge_types
-            .insert(std::make_pair(min2.second.first < min2.second.second
-                                       ? std::make_pair(min2.second.first, min2.second.second)
-                                       : std::make_pair(min2.second.second, min2.second.first),
-                                   0))
-            .first->second;
+      ++temp_edge_types.insert_or_zero(min2.second.first < min2.second.second
+                                           ? std::make_pair(min2.second.first, min2.second.second)
+                                           : std::make_pair(min2.second.second, min2.second.first));
       ++gaps;
       v3Vertices_end->first = g.target_of(min2.first);
       v3Vertices_end->second = connectivity;
@@ -310,12 +313,10 @@ vcp<4, r, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
          it2 != v3Vertices_end; ++it2) {
       while (min.first != min_exhausted_sentinel && g.target_of(min.first) < it2->first) {
         if (g.target_of(min.first) != v1 && g.target_of(min.first) != v2) {
-          ++temp_edge_types
-                .insert(std::make_pair(min.second.first < min.second.second
-                                           ? std::make_pair(min.second.first, min.second.second)
-                                           : std::make_pair(min.second.second, min.second.first),
-                                       0))
-                .first->second;
+          ++temp_edge_types.insert_or_zero(
+              min.second.first < min.second.second
+                  ? std::make_pair(min.second.first, min.second.second)
+                  : std::make_pair(min.second.second, min.second.first));
           ++v4_local_count;
           it1->second(0, 3) = 0;
           it1->second(3, 0) = 0;
@@ -343,12 +344,10 @@ vcp<4, r, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
         }
       } else {
         if (it1->first < it2->first) {
-          ++temp_edge_types
-                .insert(std::make_pair(min.second.first < min.second.second
-                                           ? std::make_pair(min.second.first, min.second.second)
-                                           : std::make_pair(min.second.second, min.second.first),
-                                       0))
-                .first->second;
+          ++temp_edge_types.insert_or_zero(
+              min.second.first < min.second.second
+                  ? std::make_pair(min.second.first, min.second.second)
+                  : std::make_pair(min.second.second, min.second.first));
           it1->second(0, 3) = it2->second(0, 2);
           it1->second(3, 0) = it2->second(2, 0);
           it1->second(1, 3) = it2->second(1, 2);
@@ -364,12 +363,9 @@ vcp<4, r, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
     }
     while (min.first != min_exhausted_sentinel) {
       if (g.target_of(min.first) != v1 && g.target_of(min.first) != v2) {
-        ++temp_edge_types
-              .insert(std::make_pair(min.second.first < min.second.second
-                                         ? std::make_pair(min.second.first, min.second.second)
-                                         : std::make_pair(min.second.second, min.second.first),
-                                     0))
-              .first->second;
+        ++temp_edge_types.insert_or_zero(min.second.first < min.second.second
+                                             ? std::make_pair(min.second.first, min.second.second)
+                                             : std::make_pair(min.second.second, min.second.first));
         ++v4_local_count;
         it1->second(0, 3) = 0;
         it1->second(3, 0) = 0;
@@ -399,19 +395,14 @@ vcp<4, r, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
   // v1v2's own directionality class, sorted (lo, hi) to match edge_types keys.
   connectivity_address_type const v1v2_lo(std::min(connectivity(0, 1), connectivity(1, 0)));
   connectivity_address_type const v1v2_hi(std::max(connectivity(0, 1), connectivity(1, 0)));
-  for (typename std::map<std::pair<connectivity_address_type, connectivity_address_type>,
-                         unsigned long>::const_iterator it(edge_types.begin());
-       it != edge_types.end(); ++it) {
-    connectivity(2, 3) =
-        it->first.first; // THESE ARE ALWAYS GOING TO BE COLLAPSED ISOMORPHICALLY EQUIVALENTLY HERE,
-                         // SO WE CAN BENCHMARK AFTER GETTING RID OF THE UGLY MAKE_PAIRS
-    connectivity(3, 2) = it->first.second;
-    typename std::map<std::pair<connectivity_address_type, connectivity_address_type>,
-                      unsigned long>::const_iterator temp_it(temp_edge_types.find(it->first));
-    unsigned long count(it->second);
-    if (temp_it != temp_edge_types.end()) {
-      count -= temp_it->second;
-      if (it->first.first == 0 && it->first.second == 0) {
+  edge_types.for_each([&](edge_key_type const &key, unsigned long edge_count) {
+    connectivity(2, 3) = key.first;
+    connectivity(3, 2) = key.second;
+    unsigned long const *temp_val = temp_edge_types.find(key);
+    unsigned long count(edge_count);
+    if (temp_val != nullptr) {
+      count -= *temp_val;
+      if (key.first == 0 && key.second == 0) {
         // For the unconnected class, !bool(c01+c10) is 1 iff v1v2 is itself
         // unconnected — the self-correction for that class. The trailing
         // terms subtract pairs that can never be enumerated (both endpoints
@@ -424,13 +415,18 @@ vcp<4, r, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
     // itself if it has any directedness, so when the current class matches
     // v1v2's own class, subtract 1. The unconnected class handles its own
     // self-correction above via !bool(c01+c10).
-    if ((it->first.first != 0 || it->first.second != 0) && it->first.first == v1v2_lo &&
-        it->first.second == v1v2_hi) {
+    if ((key.first != 0 || key.second != 0) && key.first == v1v2_lo && key.second == v1v2_hi) {
       count -= 1;
     }
     counts.insert(std::make_pair(mapper.canonical_subgraph_address(connectivity), 0))
         .first->second += count;
-  }
+  });
+
+#ifdef VCP_INSTRUMENT_K
+  k_probe::record("temp_edge_types", temp_edge_types.size());
+  k_probe::record("edge_types", edge_types.size());
+  k_probe::record("counts", counts.size());
+#endif
 
   return counts;
 }

@@ -1,0 +1,192 @@
+Filters: [!benchmark]
+Randomness seeded to: 2312306045
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+bench_container_mix is a Catch2 v3.13.0 host application.
+Run with -? for options
+
+-------------------------------------------------------------------------------
+container k=16
+-------------------------------------------------------------------------------
+/home/rlichten/git/vcp/benchmark/small_map_study/bench_container_mix.cpp:252
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+std::map                                        30           103    8.16687 ms
+                                        2.61603 us    2.58188 us     2.6621 us
+                                            110 ns    82.0772 ns    163.161 ns
+
+std::unordered_map                              30           244     8.1618 ms
+                                        1.12813 us     1.1126 us    1.15198 us
+                                        52.9251 ns    36.9574 ns     79.352 ns
+
+flat_pair_vec                                   30           155    8.16075 ms
+                                        1.81447 us    1.78224 us    1.87493 us
+                                        119.452 ns    58.3575 ns    183.962 ns
+
+stack_flat[cap=16]                              30           166    8.20206 ms
+                                        1.63786 us    1.62031 us    1.65513 us
+                                        48.7712 ns     40.054 ns    60.9997 ns
+
+dense_array[16]                                 30          1001    8.13813 ms
+                                        270.128 ns    267.535 ns    272.654 ns
+                                        7.16978 ns    6.42432 ns    8.12861 ns
+
+
+-------------------------------------------------------------------------------
+container k=64
+-------------------------------------------------------------------------------
+/home/rlichten/git/vcp/benchmark/small_map_study/bench_container_mix.cpp:271
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+std::map                                        30            20     8.4342 ms
+                                        14.3021 us    14.0464 us    14.7312 us
+                                        907.735 ns    541.273 ns    1.35152 us
+
+std::unordered_map                              30            60      8.262 ms
+                                         4.5287 us    4.48577 us    4.58469 us
+                                        136.644 ns    107.759 ns    208.297 ns
+
+flat_pair_vec                                   30            10     8.7234 ms
+                                        29.1793 us     28.923 us    29.4744 us
+                                        769.819 ns    633.921 ns    1.02601 us
+
+stack_flat[cap=64]                              30            10     8.3517 ms
+                                         27.209 us    26.9793 us    27.4345 us
+                                        635.214 ns    566.849 ns     708.28 ns
+
+dense_array[64]                                 30           524    8.14296 ms
+                                        516.686 ns    512.077 ns    521.302 ns
+                                        12.9633 ns    11.8273 ns     14.769 ns
+
+
+-------------------------------------------------------------------------------
+container k=256
+-------------------------------------------------------------------------------
+/home/rlichten/git/vcp/benchmark/small_map_study/bench_container_mix.cpp:290
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+std::map                                        30             2    12.1567 ms
+                                        205.025 us    203.225 us    208.052 us
+                                        6.40078 us     4.1879 us    10.8013 us
+
+std::unordered_map                              30            14     8.2782 ms
+                                        20.1206 us     19.723 us    21.4501 us
+                                        1.83786 us    534.499 ns    3.83508 us
+
+flat_pair_vec                                   30             1    8.35497 ms
+                                        284.202 us    274.831 us     312.44 us
+                                        40.5969 us    7.24283 us     82.803 us
+
+stack_flat_pair_vec                             30             2    9.48372 ms
+                                        154.118 us    150.129 us    161.229 us
+                                        14.4511 us    9.06724 us    20.3791 us
+
+dense_array[256]                                30            98    8.17026 ms
+                                        2.74525 us    2.72102 us    2.77324 us
+                                        72.1956 ns    59.1832 ns    103.197 ns
+
+
+-------------------------------------------------------------------------------
+container k=4
+-------------------------------------------------------------------------------
+/home/rlichten/git/vcp/benchmark/small_map_study/bench_container_mix.cpp:233
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+std::map                                        30           740     8.1474 ms
+                                        359.929 ns    356.049 ns    363.437 ns
+                                        10.3572 ns    8.46815 ns    12.5211 ns
+
+std::unordered_map                              30           998    8.14368 ms
+                                        271.475 ns    268.941 ns    273.959 ns
+                                        7.06269 ns    6.37277 ns    7.98675 ns
+
+flat_pair_vec                                   30          1356      8.136 ms
+                                        201.194 ns    196.722 ns    207.404 ns
+                                        14.5584 ns    10.9019 ns    18.5904 ns
+
+stack_flat[cap=4]                               30          1105     8.1549 ms
+                                        245.924 ns    243.544 ns    248.229 ns
+                                        6.56812 ns    5.98039 ns    7.55099 ns
+
+dense_array[4]                                  30          5163    8.05428 ms
+                                        51.7456 ns    51.2553 ns    52.2601 ns
+                                        1.40681 ns    1.22703 ns    1.65216 ns
+
+
+-------------------------------------------------------------------------------
+container k=4096
+-------------------------------------------------------------------------------
+/home/rlichten/git/vcp/benchmark/small_map_study/bench_container_mix.cpp:334
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+std::map                                        30             1    213.603 ms
+                                        7.16181 ms    7.13811 ms    7.18931 ms
+                                        71.7069 us    57.9488 us    93.4889 us
+
+std::unordered_map                              30             1    12.4571 ms
+                                         416.51 us    411.817 us    422.905 us
+                                        15.1738 us    10.3719 us    21.7182 us
+
+flat_pair_vec                                   30             1     1.83375 s
+                                        59.8065 ms    59.6145 ms    60.4893 ms
+                                        906.957 us    223.552 us    1.92335 ms
+
+stack_flat_pair_vec                             30             1    81.0384 ms
+                                        2.69707 ms    2.65258 ms    2.77591 ms
+                                         160.95 us    103.766 us    265.683 us
+
+
+-------------------------------------------------------------------------------
+container k=1024
+-------------------------------------------------------------------------------
+/home/rlichten/git/vcp/benchmark/small_map_study/bench_container_mix.cpp:312
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+std::map                                        30             1    41.6026 ms
+                                        1.26182 ms    1.25664 ms     1.2693 ms
+                                        17.1126 us    12.0377 us    24.3183 us
+
+std::unordered_map                              30             4    10.4522 ms
+                                        85.9608 us    85.1048 us     87.576 us
+                                        3.20143 us    1.85861 us    5.68243 us
+
+flat_pair_vec                                   30             1    114.791 ms
+                                        3.89412 ms    3.83343 ms    4.12023 ms
+                                        294.242 us    56.1453 us    639.554 us
+
+stack_flat_pair_vec                             30             1    20.0725 ms
+                                        675.518 us    656.751 us    706.359 us
+                                        66.1184 us    45.6242 us     103.48 us
+
+dense_array[1024]                               30            25      8.256 ms
+                                        10.9526 us    10.8639 us    11.0509 us
+                                        260.361 ns    217.298 ns    360.638 ns
+
+
+===============================================================================
+test cases: 6 | 6 passed
+assertions: - none -

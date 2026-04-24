@@ -204,6 +204,57 @@ Several design decisions that may not be obvious from the source:
   specializations if a concrete multithreaded use case emerges. The
   `vcp<3, ...>` specializations need no such change.
 
+- **Container strategy for `temp_edge_types` and `edge_types`** in the
+  `vcp<4, r, false>` and `vcp<4, r, true>` generic specializations.
+  These two internal maps used to be `std::map<connectivity_address_type,
+  unsigned long>` (and a pair-keyed variant for the directed case).
+  They now route through `detail::dense_or_sparse_map`, a two-tier
+  facade that picks the container at compile time from the key-space
+  size:
+
+  - **tier 1 (dense)** — `std::array<unsigned long, KeyCount>` backed
+    by a heap allocation plus a small presence-tracking vector. Fires
+    when `KeyCount * sizeof(unsigned long)` fits under an 8 MB byte
+    budget. Covers `r ≤ 20` (undirected) and `r ≤ 10` (directed,
+    where the key is a sorted pair and the effective bit count is
+    `2r`). Construction is O(1) in real work — `new` reserves virtual
+    memory without touching physical pages — and each call is zero
+    per-entry allocations because the container is a class member
+    reused across `generate_vector` calls, cleared in O(k) at the top
+    of each call.
+
+  - **tier 2 (sparse)** — `std::unordered_map` with a `pair_hash`
+    combine for the directed-edge pair key. Fires above the byte
+    budget (so `r ≥ 21` undirected or `r ≥ 11` directed). Avoids the
+    per-node allocator cost `std::map` would incur at the cardinalities
+    observed in practice (up to k ≈ 3000 on 30-bit diverse edge
+    values; see `benchmark/small_map_study/results/summary_phase_B.md`).
+
+  A three-tier design with a `std::vector<std::pair>` linear-scan
+  middle tier was evaluated in
+  `benchmark/small_map_study/results/summary_phase_C.md` and dropped:
+  at every cardinality we measured, linear scan was beaten by either
+  the dense tier (when the key space was small enough that dense was
+  feasible) or by the hash tier (when k ≥ ~16). The linear-scan tier
+  had no operating regime where it was strictly best, so carrying it
+  would have been complexity without performance.
+
+  `counts` — the per-call return map — is intentionally **not**
+  refactored by this change. Its keys are `subgraph_address_type`,
+  which becomes `boost::multiprecision::cpp_int` for `r ≥ 11`
+  undirected (or `r ≥ 6` directed), making a dense tier infeasible
+  and requiring a cpp_int-compatible hash for a sparse tier. Left for
+  a follow-up once the larger-k cost distribution on representative
+  workloads is characterized.
+
+  Tool-level measurement: `vcp_gen 4 2 0 n=200` (the workload that
+  stresses the refactored maps most in the default instantiation set)
+  improves from 2.11s to 2.09s median of 5 runs, a modest 2–3%. The
+  architectural benefit — zero per-call allocations for the two
+  refactored maps at every r — is the more durable win and is the
+  reason to prefer the new design even where the wall-clock delta is
+  small. See `benchmark/small_map_study/` for the full study.
+
 ## Dependencies
 
 - **Boost** (headers only) — for `boost::multiprecision::cpp_int`, used to

@@ -2,3 +2,9 @@ bin/
 fixtures/
 results/
 worktree-*/
+
+# The small-map study is a one-off investigation that drove a design
+# decision recorded in the repo (`detail::dense_or_sparse_map` and its
+# README/CHANGELOG entries). Its results are documentation, not
+# regenerable build artifacts, and are tracked.
+!small_map_study/results/
