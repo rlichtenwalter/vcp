@@ -166,9 +166,23 @@ template <std::size_t r> std::size_t multirelational_directed_graph<r>::in_edge_
 }
 
 template <std::size_t r> std::size_t multirelational_directed_graph<r>::relation_count() const {
-  static std::size_t count(std::ceil(
-      std::log2(*std::max_element(&edge_values[0], &edge_values[2 * num_out_edges]) + 1)));
-  return count;
+  // Number of bits required to represent the largest stored edge value —
+  // i.e. the index of the highest-numbered relation with at least one edge.
+  // This is a property of the data, not the template parameter r (which is
+  // the maximum capacity). Returns 0 for an empty graph or one whose edges
+  // all have value 0 (no relations set). Bit-counting rather than
+  // std::log2 is used because connectivity_address_type may be a
+  // boost::multiprecision integer, for which std::log2 is not defined.
+  if (num_out_edges == 0) {
+    return 0;
+  }
+  connectivity_address_type const max_val(
+      *std::max_element(&edge_values[0], &edge_values[2 * num_out_edges]));
+  std::size_t bits(0);
+  for (connectivity_address_type v(max_val); v > 0; v >>= 1) {
+    ++bits;
+  }
+  return bits;
 }
 
 template <std::size_t r>
