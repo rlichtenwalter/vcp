@@ -27,6 +27,7 @@ vcp_add_catch_test(test_placeholder)
 vcp_add_catch_test(test_square_matrix)
 vcp_add_catch_test(test_multirelational_graph)
 vcp_add_catch_test(test_multirelational_directed_graph)
+vcp_add_catch_test(test_vcp_dynamic_mapper)
 vcp_add_catch_test(test_vcp_4_r_0)
 vcp_add_catch_test(test_vcp_4_r_1)
 

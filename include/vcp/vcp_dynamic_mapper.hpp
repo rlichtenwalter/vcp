@@ -138,13 +138,19 @@ vcp_dynamic_mapper<n, r, d>::canonical_subgraph_address(
 template <std::size_t n, std::size_t r, bool d>
 square_matrix<typename vcp_dynamic_mapper<n, r, d>::connectivity_address_type, n>
 vcp_dynamic_mapper<n, r, d>::element_structure(subgraph_address_type const &address) const {
-  subgraph_address_type r_pset(vcp_dynamic_mapper::subgraph_address_type(1) << r);
+  // Each (row, col) slot occupies r bits of `address`, so the slot-mask is
+  // (1 << r) - 1 and advancing to the next slot shifts by r. The previous
+  // form shifted by (1 << r) — the size of the r-relation power-set —
+  // which scrambled decoding for every r (and was all-zeros UB for r with
+  // 2**r >= the address bit-width).
+  subgraph_address_type const slot_mask((vcp_dynamic_mapper::subgraph_address_type(1) << r) - 1);
+  subgraph_address_type remaining(address);
   square_matrix<connectivity_address_type, n> matrix;
   std::size_t row(0);
   std::size_t column(1);
-  while (address > 0) {
-    matrix(row, column) = address & (r_pset - 1);
-    address >>= r_pset;
+  while (remaining > 0) {
+    matrix(row, column) = remaining & slot_mask;
+    remaining >>= r;
     if (d) {
       std::swap(row, column);
       if (row < column) {
