@@ -20,11 +20,14 @@ Profiles code base. If not, see <http://www.gnu.org/licenses/>.
 #define VCP_DIRECTED_GRAPH
 
 #include <algorithm>
+#include <charconv>
 #include <cstddef>
 #include <iostream>
 #include <memory>
 #include <sstream>
+#include <stdexcept>
 #include <string>
+#include <system_error>
 #include <vector>
 
 namespace vcp {
@@ -230,7 +233,18 @@ inline std::istream &operator>>(std::istream &is, directed_graph &g) {
     std::istringstream iss(s1);
     std::string s2;
     while (std::getline(iss, s2, ' ')) {
-      out_e_temp.push_back(atol(s2.c_str()));
+      // atol previously used here silently returns 0 on malformed input and
+      // overflows are UB. from_chars gives explicit errors and no locale
+      // dependency. Empty tokens (from trailing or doubled spaces) are
+      // preserved as zero to match the historical atol-on-empty behavior.
+      vertex_id_t parsed(0);
+      if (!s2.empty()) {
+        auto const [ptr, ec] = std::from_chars(s2.data(), s2.data() + s2.size(), parsed);
+        if (ec != std::errc{} || ptr != s2.data() + s2.size()) {
+          throw std::invalid_argument("directed_graph parse: invalid vertex id '" + s2 + "'");
+        }
+      }
+      out_e_temp.push_back(parsed);
       ++edge_id;
     }
   }
