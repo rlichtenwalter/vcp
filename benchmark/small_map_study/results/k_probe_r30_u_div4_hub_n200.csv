@@ -1,0 +1,8 @@
+map_name,workload,bucket_log2,bucket_count,bucket_lo,bucket_hi,total_samples,max_observed
+counts,r30_u_div4_hub_n200,7,84,64,127,19900,1342
+counts,r30_u_div4_hub_n200,8,7570,128,255,19900,1342
+counts,r30_u_div4_hub_n200,9,12007,256,511,19900,1342
+counts,r30_u_div4_hub_n200,10,118,512,1023,19900,1342
+counts,r30_u_div4_hub_n200,11,121,1024,2047,19900,1342
+edge_types,r30_u_div4_hub_n200,5,19900,16,31,19900,16
+temp_edge_types,r30_u_div4_hub_n200,5,19900,16,31,19900,16

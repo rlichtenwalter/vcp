@@ -41,3 +41,6 @@ target_compile_options(bench_vcp PRIVATE
 # hot-path instantiations the CLI tests do not cover.
 target_compile_options(bench_vcp PRIVATE ${VCP_SANITIZE_FLAGS})
 target_link_options(bench_vcp    PRIVATE ${VCP_SANITIZE_FLAGS})
+
+# Optional one-off instrumentation study. Opt-in via VCP_BUILD_K_PROBE.
+add_subdirectory(small_map_study)
