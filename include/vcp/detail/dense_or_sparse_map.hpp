@@ -121,10 +121,18 @@ template <typename A, typename B> struct pair_hash {
   std::size_t operator()(std::pair<A, B> const &p) const noexcept {
     std::size_t const h1 = std::hash<A>()(p.first);
     std::size_t const h2 = std::hash<B>()(p.second);
-    // Boost's hash_combine. The 0x9e3779b9 constant is the 32-bit
-    // golden-ratio multiplier; on 64-bit size_t it still distributes
-    // bits adequately for integer inputs, which is all we see here.
-    return h1 ^ (h2 + 0x9e3779b9U + (h1 << 6) + (h1 >> 2));
+    // Boost's hash_combine constant, width-selected: the 32-bit form
+    // 0x9e3779b9 is what you see in most reference snippets, but on a
+    // 64-bit size_t it leaves the upper 32 bits of h2 unmixed — a real
+    // collision risk when the sparse tier fires (r > 20 undirected /
+    // r > 10 directed), which is exactly the regime where key halves
+    // span beyond 32 bits. The 64-bit constant 0x9e3779b97f4a7c15 is
+    // the mixed-width analog used by Boost on 64-bit platforms.
+    if constexpr (sizeof(std::size_t) == 8) {
+      return h1 ^ (h2 + std::size_t(0x9e3779b97f4a7c15ULL) + (h1 << 6) + (h1 >> 2));
+    } else {
+      return h1 ^ (h2 + std::size_t(0x9e3779b9UL) + (h1 << 6) + (h1 >> 2));
+    }
   }
 };
 
