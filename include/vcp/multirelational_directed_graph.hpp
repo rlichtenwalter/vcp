@@ -115,7 +115,7 @@ multirelational_directed_graph<r>::multirelational_directed_graph(
     edges[g.edge_id(it)] = static_cast<void *>(&vertices[g.vertex_id(g.target_of(it))]);
     edge_values[g.edge_id(it)] = g.edge_value(it);
   }
-  edges[out_edge_count() + in_edge_count()] = NULL;
+  edges[out_edge_count() + in_edge_count()] = nullptr;
 }
 
 template <std::size_t r>
@@ -148,7 +148,7 @@ multirelational_directed_graph<r>::operator=(multirelational_directed_graph cons
       edges[g.edge_id(it)] = static_cast<void *>(&vertices[g.vertex_id(g.target_of(it))]);
       edge_values[g.edge_id(it)] = g.edge_value(it);
     }
-    edges[out_edge_count() + in_edge_count()] = NULL;
+    edges[out_edge_count() + in_edge_count()] = nullptr;
   }
   return *this;
 }
