@@ -42,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Vendored `lib/tclap-1.2.1/`
 
 ### Fixed
+- Pad `dbug2_*` regression fixtures with trailing empty lines so the line-count-based graph parser reads the correct `num_vertices`. The previous form omitted rows for vertices with no out-edges, so vertex IDs referenced by earlier adjacency lines were past the end of the vertex array — undefined behavior at parse time (`std::bad_alloc` on legacy, `SIGSEGV` on current). The fix makes `validate_bug2_invariants.py` runnable on all six Bug-2 coverage fixtures and lets the current build PASS ground-truth invariant checks on every one of them.
 - `vcp<4, 1, true>::generate_vector` now produces correct output on inputs containing mutual edges or shared-neighbor structure. The directed 4-vertex specialization had three co-located defects in the post-enumeration accounting:
   - **Counting (line 579)**: the asymmetric-v3v4 slot over-subtracted the v₁v₂ edge by 1 when v₁v₂ was mutual, causing unsigned underflow to 2⁶⁴−1. The original `static_cast<bool>(v1v2)` treated any v₁v₂ edge as asymmetric, but the v₁v₂ pair contributes to `amutualPairs` only when genuinely asymmetric. Fix: subtract 1 iff `v1v2` is OUT or IN.
   - **Counting (line 581)**: the mutual-v3v4 slot was missing the symmetric correction, inflating the count by 1 when v₁v₂ was mutual. The v₁v₂ mutual edge lives in `mutualPairs` but is absent from the `connections − amutuals` observation term, so the correction belongs here. Fix: subtract 1 iff `v1v2` is BOTH.
