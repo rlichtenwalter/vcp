@@ -187,21 +187,36 @@ TEST_CASE("vcp_dynamic_mapper::canonical_subgraph_address collapses v3-v4 "
   // Two matrices that differ only by swapping v3 and v4 (indices 2 and 3).
   // canonical_subgraph_address permutes indices 2 through n-1 and picks
   // the minimum, so both inputs must produce the same canonical address.
-  //
-  // NOTE: the VCP specializations only populate the upper triangle of the
-  // connectivity matrix for undirected graphs — see `it1->second(0, 2) = ...`
-  // / `it1->second(1, 2) = ...` sites in vcp_4_r_0.hpp. Matching that
-  // convention here is required: if both triangles were populated,
-  // canonical_subgraph_address's all-off-diagonals permuted iteration would
-  // double-count (value_matrix is symmetric for undirected), inflate every
-  // permuted variant past the baseline, and canonicalization would degrade
-  // to a no-op.
+  // Populating both triangles is deliberate: the permuted-term inner loop
+  // bounds now match the baseline (upper triangle for undirected), so this
+  // input form no longer double-counts. See fix for the "undirected double-
+  // count footgun" committed alongside this test.
+  vcp::vcp_dynamic_mapper<4, 1, false> mapper;
+  vcp::square_matrix<std::size_t, 4> a;
+  a(0, 2) = 1;
+  a(2, 0) = 1;
+  a(1, 3) = 1;
+  a(3, 1) = 1;
+  vcp::square_matrix<std::size_t, 4> b;
+  // Same topology with v3 and v4 swapped: 0-v4 and 1-v3 edges.
+  b(0, 3) = 1;
+  b(3, 0) = 1;
+  b(1, 2) = 1;
+  b(2, 1) = 1;
+  REQUIRE(mapper.canonical_subgraph_address(a) == mapper.canonical_subgraph_address(b));
+}
+
+TEST_CASE("vcp_dynamic_mapper::canonical_subgraph_address collapses v3-v4 "
+          "isomorphic subgraphs (upper-triangle-only input, undirected n=4, r=1)",
+          "[vcp_dynamic_mapper]") {
+  // Same isomorphism test as above, but with the historical
+  // upper-triangle-only input form that the existing VCP specializations
+  // use. Both input conventions must produce the same canonical grouping.
   vcp::vcp_dynamic_mapper<4, 1, false> mapper;
   vcp::square_matrix<std::size_t, 4> a;
   a(0, 2) = 1;
   a(1, 3) = 1;
   vcp::square_matrix<std::size_t, 4> b;
-  // Same topology with v3 and v4 swapped: 0-v4 and 1-v3 edges.
   b(0, 3) = 1;
   b(1, 2) = 1;
   REQUIRE(mapper.canonical_subgraph_address(a) == mapper.canonical_subgraph_address(b));

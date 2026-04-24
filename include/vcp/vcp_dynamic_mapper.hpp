@@ -120,10 +120,19 @@ vcp_dynamic_mapper<n, r, d>::canonical_subgraph_address(
   for (std::size_t row(0); row < n; ++row) {
     permuter[row] = row;
   }
+  // The inner-loop bounds match those of `subgraph_address` above so the
+  // baseline and every permuted variant iterate the same set of slots.
+  // In particular, for undirected (d == false) we must iterate the upper
+  // triangle only — otherwise the permuted term double-counts each pair
+  // (value_matrix is symmetric for undirected, so it adds the same slot
+  // contribution twice), the permuted address always exceeds the baseline,
+  // `std::min` always picks the baseline, and canonicalization silently
+  // degrades to a no-op for any caller that populates both triangles of
+  // the connectivity matrix.
   while (std::next_permutation(permuter.begin() + 2, permuter.end())) {
     subgraph_address_type isomorphism_address(0);
     for (std::size_t row(0); row < n; ++row) {
-      for (std::size_t column(0); column < n; ++column) {
+      for (std::size_t column(d ? 0 : row + 1); column < n; ++column) {
         if (row != column) {
           isomorphism_address += subgraph_address_type(connectivity(row, column))
                                  << value_matrix(permuter[row], permuter[column]);
