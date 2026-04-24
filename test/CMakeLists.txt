@@ -11,15 +11,20 @@ list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
 include(Catch)
 
 # --- Unit tests ---
-# Placeholder for the tooling-modernization pass; real unit tests land in a
-# follow-up release.
-add_executable(test_placeholder test_placeholder.cpp)
-target_link_libraries(test_placeholder PRIVATE vcp::vcp Catch2::Catch2WithMain)
-# Inherit the sanitizer flags set at the root so tests exercise the same
+# Each test executable is registered for CTest via catch_discover_tests.
+# Sanitizer flags propagate from the root so tests exercise the same
 # instrumentation as tools when VCP_SANITIZE=ON.
-target_compile_options(test_placeholder PRIVATE ${VCP_SANITIZE_FLAGS})
-target_link_options(test_placeholder    PRIVATE ${VCP_SANITIZE_FLAGS})
-catch_discover_tests(test_placeholder)
+
+function(vcp_add_catch_test name)
+    add_executable(${name} ${name}.cpp)
+    target_link_libraries(${name} PRIVATE vcp::vcp Catch2::Catch2WithMain)
+    target_compile_options(${name} PRIVATE ${VCP_SANITIZE_FLAGS})
+    target_link_options(${name}    PRIVATE ${VCP_SANITIZE_FLAGS})
+    catch_discover_tests(${name})
+endfunction()
+
+vcp_add_catch_test(test_placeholder)
+vcp_add_catch_test(test_vcp_4_r_0)
 
 # --- CLI smoke tests ---
 # Each tool responds to --version and --help. These verify CLI11 wiring and

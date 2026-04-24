@@ -106,7 +106,7 @@ vcp<4, r, false>::generate_vector(const_vertex_iterator v1, const_vertex_iterato
         ++gaps;
         v3Vertices_end->first = g.target_of(v2_neighbors_it);
         v3Vertices_end->second = connectivity;
-        v3Vertices_end->second(1, 2) = g.edge_value(v1_neighbors_it);
+        v3Vertices_end->second(1, 2) = g.edge_value(v2_neighbors_it);
         ++v3Vertices_end;
       }
       ++v2_neighbors_it;
@@ -140,7 +140,7 @@ vcp<4, r, false>::generate_vector(const_vertex_iterator v1, const_vertex_iterato
       ++gaps;
       v3Vertices_end->first = g.target_of(v2_neighbors_it);
       v3Vertices_end->second = connectivity;
-      v3Vertices_end->second(1, 2) = g.edge_value(v1_neighbors_it);
+      v3Vertices_end->second(1, 2) = g.edge_value(v2_neighbors_it);
       ++v3Vertices_end;
     }
     ++v2_neighbors_it;
