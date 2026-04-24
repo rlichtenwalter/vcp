@@ -597,6 +597,28 @@ std::array<unsigned long, vcp<4, 1, true>::element_count()> const inline vcp<
       this->amutualPairs - amutuals - static_cast<bool>(v1v2 == OUT || v1v2 == IN);
   counts[element_address(v1v2 + BOTH * V3V4)] =
       this->mutualPairs - (connections - amutuals) - static_cast<bool>(v1v2 == BOTH);
+  // Debug-only guards for the K4-bidirectional-class underflow bug that
+  // motivated fix/vcp-4-1-1-underflow. Every operand is unsigned; a
+  // miscounted v3_count or v4_count would silently wrap a sub-expression
+  // and poison this slot with a ~2**64 value. Guard each dangerous
+  // sub-expression — including `vertex_count - 2 - v3_count` which can
+  // itself underflow if v3_count > V - 2 — then guard the combined RHS.
+  // Release build compiles these away under NDEBUG.
+#ifndef NDEBUG
+  {
+    assert(g.vertex_count() >= 2 + v3_count &&
+           "v3_count exceeds vertex_count - 2 (upstream miscounting)");
+    long long const V = static_cast<long long>(g.vertex_count());
+    long long const positive =
+        static_cast<long long>(unconnected_pairs) + static_cast<long long>(3 * v4_count);
+    long long const negative =
+        static_cast<long long>(gaps + !static_cast<bool>(v1v2)) +
+        static_cast<long long>((2 + v3_count) * (V - 2 - static_cast<long long>(v3_count)));
+    assert(positive >= negative && "unconnected_pairs subtraction chain underflowed");
+    assert(positive - negative <= static_cast<long long>(unconnected_pairs) &&
+           "unconnected_pairs subtraction chain overshot its upper bound");
+  }
+#endif
   counts[element_address(v1v2)] = unconnected_pairs - (gaps + !static_cast<bool>(v1v2)) -
                                   (2 + v3_count) * (g.vertex_count() - 2 - v3_count) + 3 * v4_count;
 
