@@ -53,6 +53,12 @@ private:
   constexpr static const std::size_t num_structures = 64;
   static std::size_t element_address(std::size_t subgraph_address);
   unsigned long unconnected_pairs;
+  // Scratch buffer for v3 candidates accumulated during `generate_vector`.
+  // Allocated once per instance, reused across every call — which makes
+  // this class NOT thread-safe for shared-instance concurrent calls.
+  // Construct one `vcp<4, 1, false>` per thread if parallelism is needed;
+  // the underlying graph is safe to share for read. See README "Thread
+  // safety" for the supported pattern.
   std::unique_ptr<std::pair<const_vertex_iterator, unsigned char>[]> v3Vertices;
 };
 

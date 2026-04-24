@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - CLI `--version` output for each tool, sourced from VERSION via CMake
 
 ### Changed
+- Documented thread-safety contract per `vcp<n, r, d>` specialization in README and in-header comments. `vcp<3, r, d>` is safe for shared-instance concurrent calls (no mutable class state); `vcp<4, r, d>` is not safe because of the `v3Vertices` scratch buffer held as a class member. The uniform "one `vcp` per thread" pattern is always safe and recommended as the default. Previously the contract was unwritten.
 - `regression/run.sh` now encodes expected divergence between the legacy and current builds for fixture classes where legacy has a known bug that has since been fixed:
   - **Phase 3 (vcp_generate byte-diff)**: `(n = 4, r = 1, d = 1)` and any `r ≥ 2` run are marked as "legacy has a known-buggy regime," so a divergence reports PASS instead of FAIL. Matches are still PASS (fixture just didn't trigger the bug). Outside these regimes, divergence is still a regression.
   - **Phase 4 (directed_to_undirected byte-diff)**: fixtures whose names don't contain `bidirectional` or `mutual` are marked as "legacy d2u has a bug on asymmetric edges" (legacy actually gets killed by the kernel on these). Divergence is expected; the mutual/bidirectional cases are the strict-match set.
