@@ -99,40 +99,54 @@ TEST_CASE("vcp_static_mapper::element_structure round-trips a subgraph address f
   }
 }
 
-TEST_CASE("vcp_static_mapper and vcp_dynamic_mapper agree on a common fixture",
-          "[vcp_static_mapper][cross-check]") {
-  // Build the same triangle connectivity through the static and dynamic
-  // APIs and require that their canonical (static) / element (static)
-  // mappings collapse the same set of inputs onto the same set of
-  // buckets. This is a coarse cross-check; for a more exhaustive
-  // agreement test, scale the enumeration to all 64 subgraphs.
+TEST_CASE(
+    "vcp_static_mapper and vcp_dynamic_mapper induce the same element partition for (4, 1, 0)",
+    "[vcp_static_mapper][cross-check]") {
+  // The two mappers' value_matrix layouts differ (static uses powers of
+  // 2^r, dynamic packs by bit-shifts), but the property that must hold
+  // regardless is that they agree on the *equivalence partition* of
+  // subgraphs. Formally, for any two subgraphs s1, s2 in [0, 64):
+  //
+  //   static.element_address(s1) == static.element_address(s2)
+  //   iff
+  //   dynamic.canonical_subgraph_address(s1) ==
+  //       dynamic.canonical_subgraph_address(s2).
+  //
+  // A bug that renumbered one mapper's element space but preserved the
+  // partition would pass; a bug that split or merged equivalence
+  // classes on either side would fail. This is the proper cross-check
+  // of static-vs-dynamic agreement — the earlier form of this test
+  // compared two unrelated quantities and would have missed a real
+  // discrepancy.
   vcp::vcp_static_mapper s(4, 1, false);
   vcp::vcp_dynamic_mapper<4, 1, false> d;
 
-  vcp::square_matrix<std::size_t> conn_s(4);
-  vcp::square_matrix<std::size_t, 4> conn_d;
-  // Triangle 0-1-2, vertex 3 isolated. Same topology in both matrices.
-  conn_s(0, 1) = conn_s(1, 0) = 1;
-  conn_s(0, 2) = conn_s(2, 0) = 1;
-  conn_s(1, 2) = conn_s(2, 1) = 1;
-  conn_d(0, 1) = conn_d(1, 0) = 1;
-  conn_d(0, 2) = conn_d(2, 0) = 1;
-  conn_d(1, 2) = conn_d(2, 1) = 1;
+  auto build = [](std::size_t subgraph) {
+    vcp::square_matrix<std::size_t> conn_s(4);
+    vcp::square_matrix<std::size_t, 4> conn_d;
+    std::size_t bits(subgraph);
+    std::size_t slot(0);
+    for (std::size_t row(0); row < 4; ++row) {
+      for (std::size_t column(row + 1); column < 4; ++column) {
+        std::size_t const v((bits >> slot) & 1);
+        conn_s(row, column) = v;
+        conn_s(column, row) = v;
+        conn_d(row, column) = v;
+        conn_d(column, row) = v;
+        ++slot;
+      }
+    }
+    return std::make_pair(conn_s, conn_d);
+  };
 
-  // The two mappers do not need to produce byte-identical subgraph
-  // addresses (their value_matrix layouts differ: static uses powers of
-  // 2^r, dynamic packs by bit-shifts). They DO need to agree on the
-  // element mapping when paired with identical canonicalization.
-  std::size_t const static_elem = s.element_address(conn_s);
-  // Dynamic does not expose element_address; use canonical_subgraph_address
-  // as the canonicalization functional. We can at least verify that an
-  // isomorphic input collapses to the same dynamic canonical address as
-  // the input itself (stability).
-  auto const dyn_canon = d.canonical_subgraph_address(conn_d);
-  // The dynamic canonical address should be <= the raw address (canonical
-  // picks min over permutations of indices 2..n-1).
-  REQUIRE(dyn_canon <= d.subgraph_address(conn_d));
-  // And the static mapping should place this triangle in a specific
-  // element — just confirm it's in range.
-  REQUIRE(static_elem < 40);
+  for (std::size_t s1(0); s1 < 64; ++s1) {
+    auto const inputs1 = build(s1);
+    for (std::size_t s2(s1); s2 < 64; ++s2) {
+      auto const inputs2 = build(s2);
+      bool const static_same = s.element_address(inputs1.first) == s.element_address(inputs2.first);
+      bool const dynamic_same = d.canonical_subgraph_address(inputs1.second) ==
+                                d.canonical_subgraph_address(inputs2.second);
+      REQUIRE(static_same == dynamic_same);
+    }
+  }
 }

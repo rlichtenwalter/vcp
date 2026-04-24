@@ -132,13 +132,34 @@ TEST_CASE("vcp<4,1,true> sum invariant on directed C4", "[vcp_4_1_1][invariant]"
 
 TEST_CASE("vcp<4,1,true> sum invariant on 5-vertex mixed graph", "[vcp_4_1_1][invariant]") {
   // V=5: C(V-2, 2) = 3 per pair. Mix of mutual and asymmetric edges.
-  // Mutual 0<->1, asymmetric 0->2, 2->3, 3->1, vertex 4 isolated.
+  // Mutual 0<->1, asymmetric 0->2, 2->3, 3->1, vertex 4 isolated. Every
+  // ordered pair exercised — the invariant is per-pair and topology-
+  // dependent bugs can hide behind any subset of pivots.
   vcp::directed_graph g = parse("1 2\n0\n3\n1\n\n");
   REQUIRE(g.vertex_count() == 5);
   vcp::vcp<4, 1, true> v(g);
-  check_pair(v, g, 0, 1); // mutual pair
-  check_pair(v, g, 0, 2); // asymmetric pair
-  check_pair(v, g, 0, 4); // unconnected pair
+  for (std::size_t a(0); a < 5; ++a) {
+    for (std::size_t b(0); b < 5; ++b) {
+      if (a != b) {
+        check_pair(v, g, a, b);
+      }
+    }
+  }
+}
+
+TEST_CASE("vcp<4,1,true> single-bucket concentration on directed K5 bidirectional", "[vcp_4_1_1]") {
+  // K5-bidirectional: every pair mutual. All C(V-2, 2) = 3 non-pivot
+  // pairs are in the same bucket, so the whole count vector has one
+  // non-zero slot with value 3. Strictly stronger than sum-only.
+  vcp::directed_graph g = parse("1 2 3 4\n0 2 3 4\n0 1 3 4\n0 1 2 4\n0 1 2 3\n");
+  REQUIRE(g.vertex_count() == 5);
+  vcp::vcp<4, 1, true> v(g);
+  auto const counts = v.generate_vector(vertex_at(g, 0), vertex_at(g, 1));
+  auto const nonzero = static_cast<unsigned long>(
+      std::count_if(counts.begin(), counts.end(), [](unsigned long c) { return c != 0; }));
+  REQUIRE(nonzero == 1);
+  unsigned long const peak = *std::max_element(counts.begin(), counts.end());
+  REQUIRE(peak == 3);
 }
 
 TEST_CASE("vcp<4,1,true> locates the single non-zero bucket for V=4", "[vcp_4_1_1]") {

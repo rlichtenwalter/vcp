@@ -134,15 +134,35 @@ TEST_CASE("vcp<4,1,false> sum invariant on empty graph (4 isolated vertices)",
 }
 
 TEST_CASE("vcp<4,1,false> sum invariant on 5-vertex graphs", "[vcp_4_1_0][invariant]") {
-  // V=5: C(V-2, 2) = 3 per pair. Pentagon cycle.
+  // V=5: C(V-2, 2) = 3 per pair. Pentagon cycle. Exercise every pair —
+  // the invariant is per-pair and a topology-dependent bug could pass
+  // on adjacent pairs while failing on non-adjacent ones.
   vcp::graph g = parse("1 4\n0 2\n1 3\n2 4\n0 3\n");
   REQUIRE(g.vertex_count() == 5);
   vcp::vcp<4, 1, false> v(g);
-  // Test a subset of pairs for speed; the invariant is per-pair so
-  // covering 3 representative pairs is sufficient.
-  check_pair(v, g, 0, 1); // adjacent
-  check_pair(v, g, 0, 2); // non-adjacent, path-2 apart
-  check_pair(v, g, 0, 4); // adjacent (wraparound)
+  for (std::size_t a(0); a < 5; ++a) {
+    for (std::size_t b(0); b < 5; ++b) {
+      if (a != b) {
+        check_pair(v, g, a, b);
+      }
+    }
+  }
+}
+
+TEST_CASE("vcp<4,1,false> single-bucket concentration on K5", "[vcp_4_1_0]") {
+  // In K5 every non-pivot pair {v3, v4} is fully connected both to each
+  // other and to the pivot pair. All C(V-2, 2) = 3 counts therefore
+  // land in the same bucket — a strictly stronger invariant than sum
+  // alone, and cheap.
+  vcp::graph g = parse("1 2 3 4\n0 2 3 4\n0 1 3 4\n0 1 2 4\n0 1 2 3\n");
+  REQUIRE(g.vertex_count() == 5);
+  vcp::vcp<4, 1, false> v(g);
+  auto const counts = v.generate_vector(vertex_at(g, 0), vertex_at(g, 1));
+  auto const nonzero = static_cast<unsigned long>(
+      std::count_if(counts.begin(), counts.end(), [](unsigned long c) { return c != 0; }));
+  REQUIRE(nonzero == 1);
+  unsigned long const peak = *std::max_element(counts.begin(), counts.end());
+  REQUIRE(peak == 3);
 }
 
 TEST_CASE("vcp<4,1,false> locates the single non-zero bucket for V=4", "[vcp_4_1_0]") {

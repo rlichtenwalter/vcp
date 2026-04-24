@@ -42,7 +42,8 @@ TEST_CASE("vcp<3,1,true>::element_count is 64", "[vcp_3_1_1]") {
   REQUIRE(vcp::vcp<3, 1, true>::element_count() == 64);
 }
 
-TEST_CASE("vcp<3,1,true> directed triangle routes to OUT*V1V3 + IN*V2V3 bucket", "[vcp_3_1_1]") {
+TEST_CASE("vcp<3,1,true> directed triangle routes to OUT*V1V2 + IN*V1V3 + OUT*V2V3 bucket",
+          "[vcp_3_1_1]") {
   // 0 -> 1, 1 -> 2, 2 -> 0. From pivot (v1=0, v2=1):
   //   v1v2 = 0->1 = OUT (no reverse)
   //   v1v3 (v3=2) = 2->0 so v1's perspective is IN
