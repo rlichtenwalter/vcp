@@ -143,6 +143,14 @@ void stream_er_sparse(std::uint64_t n, double p, std::uint64_t seed,
     }
     out.put('\n');
   }
+  // Explicit flush + good() check: ofstream's destructor flushes silently,
+  // so a mid-write failure (out-of-disk, quota, broken pipe on redirected
+  // stdout, etc.) can leave the file silently truncated. The ~400 MB graph
+  // file would then be partially valid — crashable by downstream tools.
+  out.flush();
+  if (!out.good()) {
+    throw std::runtime_error("write failed to " + path.string());
+  }
 }
 
 // Sample k distinct unordered pairs (u, v) with u < v, uniformly at random.
@@ -176,6 +184,10 @@ void write_sampled_pairs(std::uint64_t n, std::uint64_t k, std::uint64_t seed,
   }
   for (auto const &[u, v] : pairs) {
     out << u << ' ' << v << '\n';
+  }
+  out.flush();
+  if (!out.good()) {
+    throw std::runtime_error("write failed to " + path.string());
   }
 }
 

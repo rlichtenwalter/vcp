@@ -40,7 +40,13 @@ public:
                                                                 const_vertex_iterator v2);
 
 private:
-  enum directedness_value : std::size_t { OUT = 1, IN = 2, BOTH = 3 };
+  // Directedness of the edge between the pivot vertex and a v3 candidate:
+  // OUT, IN, or BOTH (mutual). EMPTY is a sentinel returned by
+  // next_union_element to signal that both input iterator pairs are
+  // exhausted — chosen to be 4 so it stays outside the OUT..BOTH range
+  // and the existing `second < 3` shorthand (tests "not BOTH") continues
+  // to exclude it correctly.
+  enum directedness_value : std::size_t { OUT = 1, IN = 2, BOTH = 3, EMPTY = 4 };
   enum connectivity_value : std::size_t {
     V1V2 = 1,
     V1V3 = 4,
@@ -56,6 +62,12 @@ private:
   unsigned long amutualPairs{0};
   unsigned long mutualPairs{0};
   unsigned long unconnected_pairs{0};
+  // Scratch buffer for v3 candidates accumulated during `generate_vector`.
+  // Allocated once per instance, reused across every call — which makes
+  // this class NOT thread-safe for shared-instance concurrent calls.
+  // Construct one `vcp<4, 1, true>` per thread if parallelism is needed;
+  // the underlying graph is safe to share for read. See README "Thread
+  // safety" for the supported pattern.
   std::unique_ptr<std::pair<const_vertex_iterator, unsigned short>[]> v3Vertices;
   std::pair<const_edge_iterator, directedness_value> next_union_element(const_edge_iterator &,
                                                                         const_edge_iterator,
@@ -399,7 +411,11 @@ std::pair<const_edge_iterator, typename vcp<4, 1, true>::directedness_value> inl
   } else if (it2 != end2) {
     return std::make_pair(it2++, IN);
   } else {
-    return std::make_pair(end2, OUT); // the second element of this pair should never be used
+    // Both input iterator pairs exhausted. Signal exhaustion via the EMPTY
+    // directedness sentinel; callers test `min.second == EMPTY` rather than
+    // coincidentally comparing `min.first` to end2. The returned iterator
+    // value is unused — callers must not dereference it.
+    return std::make_pair(end2, EMPTY);
   }
 }
 
@@ -432,7 +448,7 @@ std::array<unsigned long, vcp<4, 1, true>::element_count()> const inline vcp<
       v1_out_neighbors_it, v1_out_neighbors_end, v1_in_neighbors_it, v1_in_neighbors_end));
   std::pair<const_edge_iterator, directedness_value> min2(next_union_element(
       v2_out_neighbors_it, v2_out_neighbors_end, v2_in_neighbors_it, v2_in_neighbors_end));
-  while (min1.first != v1_in_neighbors_end && min2.first != v2_in_neighbors_end) {
+  while (min1.second != EMPTY && min2.second != EMPTY) {
     if (g.target_of(min1.first) < g.target_of(min2.first)) {
       if (g.target_of(min1.first) != v2) {
         ++connections;
@@ -477,7 +493,7 @@ std::array<unsigned long, vcp<4, 1, true>::element_count()> const inline vcp<
                                 v2_in_neighbors_end);
     }
   }
-  while (min1.first != v1_in_neighbors_end) {
+  while (min1.second != EMPTY) {
     if (g.target_of(min1.first) != v2) {
       ++connections;
       ++gaps;
@@ -491,7 +507,7 @@ std::array<unsigned long, vcp<4, 1, true>::element_count()> const inline vcp<
     min1 = next_union_element(v1_out_neighbors_it, v1_out_neighbors_end, v1_in_neighbors_it,
                               v1_in_neighbors_end);
   }
-  while (min2.first != v2_in_neighbors_end) {
+  while (min2.second != EMPTY) {
     if (g.target_of(min2.first) != v1) {
       ++connections;
       ++gaps;
@@ -520,7 +536,7 @@ std::array<unsigned long, vcp<4, 1, true>::element_count()> const inline vcp<
         v3_out_neighbors_it, v3_out_neighbors_end, v3_in_neighbors_it, v3_in_neighbors_end));
     for (std::pair<const_vertex_iterator, unsigned short> *it2(v3Vertices_begin);
          it2 != v3Vertices_end; ++it2) {
-      while (min.first != v3_in_neighbors_end && g.target_of(min.first) < it2->first) {
+      while (min.second != EMPTY && g.target_of(min.first) < it2->first) {
         if (g.target_of(min.first) != v1 && g.target_of(min.first) != v2) {
           ++v4_local_count;
           if (min.second < 3) {
@@ -531,7 +547,7 @@ std::array<unsigned long, vcp<4, 1, true>::element_count()> const inline vcp<
         min = next_union_element(v3_out_neighbors_it, v3_out_neighbors_end, v3_in_neighbors_it,
                                  v3_in_neighbors_end);
       }
-      if (min.first == v3_in_neighbors_end || g.target_of(min.first) > it2->first) {
+      if (min.second == EMPTY || g.target_of(min.first) > it2->first) {
         if (it1->first < it2->first) {
           // it2 was stored in its v3 role with V1V3/V2V3 bits; promoting it to
           // v4 requires re-encoding those same connectivity values into the
@@ -557,7 +573,7 @@ std::array<unsigned long, vcp<4, 1, true>::element_count()> const inline vcp<
                                  v3_in_neighbors_end);
       }
     }
-    while (min.first != v3_in_neighbors_end) {
+    while (min.second != EMPTY) {
       if (g.target_of(min.first) != v1 && g.target_of(min.first) != v2) {
         ++v4_local_count;
         if (min.second < 3) {
@@ -587,6 +603,28 @@ std::array<unsigned long, vcp<4, 1, true>::element_count()> const inline vcp<
       this->amutualPairs - amutuals - static_cast<bool>(v1v2 == OUT || v1v2 == IN);
   counts[element_address(v1v2 + BOTH * V3V4)] =
       this->mutualPairs - (connections - amutuals) - static_cast<bool>(v1v2 == BOTH);
+  // Debug-only guards for the K4-bidirectional-class underflow bug that
+  // motivated fix/vcp-4-1-1-underflow. Every operand is unsigned; a
+  // miscounted v3_count or v4_count would silently wrap a sub-expression
+  // and poison this slot with a ~2**64 value. Guard each dangerous
+  // sub-expression — including `vertex_count - 2 - v3_count` which can
+  // itself underflow if v3_count > V - 2 — then guard the combined RHS.
+  // Release build compiles these away under NDEBUG.
+#ifndef NDEBUG
+  {
+    assert(g.vertex_count() >= 2 + v3_count &&
+           "v3_count exceeds vertex_count - 2 (upstream miscounting)");
+    long long const V = static_cast<long long>(g.vertex_count());
+    long long const positive =
+        static_cast<long long>(unconnected_pairs) + static_cast<long long>(3 * v4_count);
+    long long const negative =
+        static_cast<long long>(gaps + !static_cast<bool>(v1v2)) +
+        static_cast<long long>((2 + v3_count) * (V - 2 - static_cast<long long>(v3_count)));
+    assert(positive >= negative && "unconnected_pairs subtraction chain underflowed");
+    assert(positive - negative <= static_cast<long long>(unconnected_pairs) &&
+           "unconnected_pairs subtraction chain overshot its upper bound");
+  }
+#endif
   counts[element_address(v1v2)] = unconnected_pairs - (gaps + !static_cast<bool>(v1v2)) -
                                   (2 + v3_count) * (g.vertex_count() - 2 - v3_count) + 3 * v4_count;
 

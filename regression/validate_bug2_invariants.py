@@ -140,7 +140,7 @@ def validate_fixture(
 
     expected_sum = comb(v_count - 2, 2)
     errors: list[str] = []
-    for (v1, v2), line in zip(pairs, lines, strict=False):
+    for (v1, v2), line in zip(pairs, lines):
         counts = [int(x) for x in line.split()]
         if len(counts) != EXPECTED_VECTOR_LEN:
             errors.append(

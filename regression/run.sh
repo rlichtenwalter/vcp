@@ -254,12 +254,37 @@ for fixture_path in "$FIXTURES_DIR"/graphs_undirected/*.txt; do
             < "$pair_file" > "$current_out" 2>/dev/null || true
 
         pair_count=$(wc -l < "$pair_file")
+
+        # Legacy has known bugs in two regimes that were fixed on the
+        # fix/multirelational-correctness branch (and its parent
+        # fix/vcp-4-1-1-underflow, already merged to develop):
+        #   * (n=4, r=1, d=1): K4-bidirectional underflow + address drop
+        #     in vcp_4_1_1.hpp (fixed on prior branch).
+        #   * (r>=2): multirelational edge_value sentinel and vcp_4_r_0
+        #     v2-iterator inversion (fixed on current branch).
+        # Divergence in these regimes is expected; matches are permissible
+        # when the specific fixture doesn't trigger the bug pattern
+        # (e.g. K3 r=2 has no non-adjacent pairs so edge_value sentinel
+        # never fires). Outside these regimes, divergence is a regression.
+        known_buggy_in_legacy=0
+        if [ "$n" = "4" ] && [ "$r" = "1" ] && [ "$d" = "1" ]; then
+            known_buggy_in_legacy=1
+        fi
+        if [ "$r" -ge 2 ]; then
+            known_buggy_in_legacy=1
+        fi
+
         if cmp -s "$legacy_out" "$current_out"; then
             echo "| $fixture_name | $n | $r | $d | $pair_count | PASS |" >> "$REPORT"
             pass "vcp_generate $tag"
         else
-            echo "| $fixture_name | $n | $r | $d | $pair_count | FAIL |" >> "$REPORT"
-            fail "vcp_generate $tag"
+            if [ "$known_buggy_in_legacy" -eq 1 ]; then
+                echo "| $fixture_name | $n | $r | $d | $pair_count | PASS (diverged as expected: legacy bug) |" >> "$REPORT"
+                pass "vcp_generate $tag (diverged as expected)"
+            else
+                echo "| $fixture_name | $n | $r | $d | $pair_count | FAIL |" >> "$REPORT"
+                fail "vcp_generate $tag"
+            fi
         fi
     done
 done
@@ -288,12 +313,27 @@ for fixture_path in "$FIXTURES_DIR"/graphs_directed/*.txt; do
         "$LEGACY_BIN/directed_to_undirected" $flag < "$fixture_path" > "$legacy_out" 2>/dev/null || true
         "$CURRENT_BIN/directed_to_undirected" $flag < "$fixture_path" > "$current_out" 2>/dev/null || true
 
+        # Legacy directed_to_undirected has a bug (infinite loop / oom-killed)
+        # when the input contains any non-mutual (asymmetric) directed edges.
+        # That bug was fixed on fix/vcp-4-1-1-underflow (already merged).
+        # Bidirectional / fully-mutual fixtures were the only ones legacy
+        # could process correctly; divergence on anything else is expected.
+        known_buggy_in_legacy=1
+        case "$fixture_name" in
+            *bidirectional*|*mutual*) known_buggy_in_legacy=0 ;;
+        esac
+
         if cmp -s "$legacy_out" "$current_out"; then
             echo "| $fixture_name | $flag_label | PASS |" >> "$REPORT"
             pass "directed_to_undirected $tag"
         else
-            echo "| $fixture_name | $flag_label | FAIL |" >> "$REPORT"
-            fail "directed_to_undirected $tag"
+            if [ "$known_buggy_in_legacy" -eq 1 ]; then
+                echo "| $fixture_name | $flag_label | PASS (diverged as expected: legacy d2u bug on asymmetric edges) |" >> "$REPORT"
+                pass "directed_to_undirected $tag (diverged as expected)"
+            else
+                echo "| $fixture_name | $flag_label | FAIL |" >> "$REPORT"
+                fail "directed_to_undirected $tag"
+            fi
         fi
     done
 done
@@ -367,11 +407,24 @@ for build_tag in legacy current; do
         --fixtures "$FIXTURES_DIR" \
         >> "$RESULTS_DIR/bug2_invariants_${build_tag}.txt" 2>&1
     then
-        echo "| $build_tag | PASS |" >> "$REPORT"
-        pass "bug2_invariants $build_tag"
+        if [ "$build_tag" = "legacy" ]; then
+            # Legacy passing this suite would be a surprise: the dbug2_*
+            # fixtures exist precisely to exercise the K4-bidirectional
+            # underflow that was fixed on fix/vcp-4-1-1-underflow.
+            echo "| $build_tag | FAIL (unexpected: legacy should break on K4-bidirectional) |" >> "$REPORT"
+            fail "bug2_invariants $build_tag (unexpected pass - legacy should break)"
+        else
+            echo "| $build_tag | PASS |" >> "$REPORT"
+            pass "bug2_invariants $build_tag"
+        fi
     else
-        echo "| $build_tag | FAIL |" >> "$REPORT"
-        fail "bug2_invariants $build_tag (see results/bug2_invariants_${build_tag}.txt)"
+        if [ "$build_tag" = "legacy" ]; then
+            echo "| $build_tag | PASS (failed as expected: legacy K4-bidirectional underflow) |" >> "$REPORT"
+            pass "bug2_invariants $build_tag (failed as expected)"
+        else
+            echo "| $build_tag | FAIL |" >> "$REPORT"
+            fail "bug2_invariants $build_tag (see results/bug2_invariants_${build_tag}.txt)"
+        fi
     fi
 done
 

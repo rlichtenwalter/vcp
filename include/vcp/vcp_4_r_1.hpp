@@ -46,6 +46,12 @@ private:
   vcp_dynamic_mapper<4, r, true> mapper;
   std::map<std::pair<connectivity_address_type, connectivity_address_type>, unsigned long>
       edge_types;
+  // Scratch buffer for v3 candidates accumulated during `generate_vector`.
+  // Allocated once per instance, reused across every call — which makes
+  // this class NOT thread-safe for shared-instance concurrent calls.
+  // Construct one `vcp<4, r, true>` per thread if parallelism is needed;
+  // the underlying graph is safe to share for read. See README "Thread
+  // safety" for the supported pattern.
   std::unique_ptr<std::pair<const_vertex_iterator, connectivity_matrix>[]> v3Vertices;
   std::pair<const_edge_iterator, std::pair<connectivity_address_type, connectivity_address_type>>
   next_union_element(const_edge_iterator &, const_edge_iterator, const_edge_iterator &,
@@ -133,8 +139,14 @@ vcp<4, r, true>::next_union_element(const_edge_iterator &it1, const_edge_iterato
     temp = std::make_pair(it2, std::make_pair(0, g.edge_value(it2)));
     ++it2;
   } else {
-    return std::make_pair(
-        end2, std::make_pair(0, 0)); // the second element of this pair should never be used
+    // Both input iterator pairs exhausted. The returned iterator is `end2`
+    // by convention — callers compare `min.first` against their own
+    // `in_neighbors_end` (which they passed as end2) to detect exhaustion.
+    // The v1/v2 value pair is unused; it is (0, 0) only as a defensive
+    // default. If this exhaustion convention ever changes, every loop
+    // condition of the form `min.first != v*_in_neighbors_end` in
+    // `generate_vector` must be updated in lockstep.
+    return std::make_pair(end2, std::make_pair(0, 0));
   }
   return temp;
 }
@@ -168,13 +180,19 @@ vcp<4, r, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
                              (v2_in_neighbors_end - v2_in_neighbors_it));
   std::pair<const_vertex_iterator, connectivity_matrix> *v3Vertices_begin(&v3Vertices[0]);
   std::pair<const_vertex_iterator, connectivity_matrix> *v3Vertices_end(&v3Vertices[0]);
+  // `next_union_element` returns end2 on exhaustion (see its final else
+  // branch). We alias v{1,2}_in_neighbors_end to exhaustion-sentinel names
+  // so the loop conditions below read as a contract check rather than an
+  // accidental iterator comparison.
+  const_edge_iterator const min1_exhausted_sentinel(v1_in_neighbors_end);
+  const_edge_iterator const min2_exhausted_sentinel(v2_in_neighbors_end);
   std::pair<const_edge_iterator, std::pair<connectivity_address_type, connectivity_address_type>>
       min1(next_union_element(v1_out_neighbors_it, v1_out_neighbors_end, v1_in_neighbors_it,
                               v1_in_neighbors_end));
   std::pair<const_edge_iterator, std::pair<connectivity_address_type, connectivity_address_type>>
       min2(next_union_element(v2_out_neighbors_it, v2_out_neighbors_end, v2_in_neighbors_it,
                               v2_in_neighbors_end));
-  while (min1.first != v1_in_neighbors_end && min2.first != v2_in_neighbors_end) {
+  while (min1.first != min1_exhausted_sentinel && min2.first != min2_exhausted_sentinel) {
     if (g.target_of(min1.first) < g.target_of(min2.first)) {
       if (g.target_of(min1.first) != v2) {
         ++temp_edge_types
@@ -236,7 +254,7 @@ vcp<4, r, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
                                 v2_in_neighbors_end);
     }
   }
-  while (min1.first != v1_in_neighbors_end) {
+  while (min1.first != min1_exhausted_sentinel) {
     if (g.target_of(min1.first) != v2) {
       ++temp_edge_types
             .insert(std::make_pair(min1.second.first < min1.second.second
@@ -254,7 +272,7 @@ vcp<4, r, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
     min1 = next_union_element(v1_out_neighbors_it, v1_out_neighbors_end, v1_in_neighbors_it,
                               v1_in_neighbors_end);
   }
-  while (min2.first != v2_in_neighbors_end) {
+  while (min2.first != min2_exhausted_sentinel) {
     if (g.target_of(min2.first) != v1) {
       ++temp_edge_types
             .insert(std::make_pair(min2.second.first < min2.second.second
@@ -281,6 +299,8 @@ vcp<4, r, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
     const_edge_iterator v3_out_neighbors_end(g.out_neighbors_end(it1->first));
     const_edge_iterator v3_in_neighbors_it(g.in_neighbors_begin(it1->first));
     const_edge_iterator v3_in_neighbors_end(g.in_neighbors_end(it1->first));
+    // See comment on min{1,2}_exhausted_sentinel above.
+    const_edge_iterator const min_exhausted_sentinel(v3_in_neighbors_end);
     unsigned long v4_local_count(
         0); // keep track of how many v4 vertices are only the result of the neighbors of this v3
     std::pair<const_edge_iterator, std::pair<connectivity_address_type, connectivity_address_type>>
@@ -288,7 +308,7 @@ vcp<4, r, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
                                v3_in_neighbors_end));
     for (std::pair<const_vertex_iterator, connectivity_matrix> *it2(v3Vertices_begin);
          it2 != v3Vertices_end; ++it2) {
-      while (min.first != v3_in_neighbors_end && g.target_of(min.first) < it2->first) {
+      while (min.first != min_exhausted_sentinel && g.target_of(min.first) < it2->first) {
         if (g.target_of(min.first) != v1 && g.target_of(min.first) != v2) {
           ++temp_edge_types
                 .insert(std::make_pair(min.second.first < min.second.second
@@ -309,7 +329,7 @@ vcp<4, r, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
         min = next_union_element(v3_out_neighbors_it, v3_out_neighbors_end, v3_in_neighbors_it,
                                  v3_in_neighbors_end);
       }
-      if (min.first == v3_in_neighbors_end || g.target_of(min.first) > it2->first) {
+      if (min.first == min_exhausted_sentinel || g.target_of(min.first) > it2->first) {
         if (it1->first < it2->first) {
           ++gaps;
           it1->second(0, 3) = it2->second(0, 2);
@@ -334,7 +354,7 @@ vcp<4, r, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
           it1->second(1, 3) = it2->second(1, 2);
           it1->second(3, 1) = it2->second(2, 1);
           it1->second(2, 3) = min.second.first;
-          it1->second(3, 3) = min.second.second;
+          it1->second(3, 2) = min.second.second;
           ++counts.insert(std::make_pair(mapper.canonical_subgraph_address(it1->second), 0))
                 .first->second;
         }
@@ -342,7 +362,7 @@ vcp<4, r, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
                                  v3_in_neighbors_end);
       }
     }
-    while (min.first != v3_in_neighbors_end) {
+    while (min.first != min_exhausted_sentinel) {
       if (g.target_of(min.first) != v1 && g.target_of(min.first) != v2) {
         ++temp_edge_types
               .insert(std::make_pair(min.second.first < min.second.second
@@ -376,6 +396,9 @@ vcp<4, r, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
         g.vertex_count() - 2 - ((v3Vertices_end - v3Vertices_begin) + v4_local_count);
   }
 
+  // v1v2's own directionality class, sorted (lo, hi) to match edge_types keys.
+  connectivity_address_type const v1v2_lo(std::min(connectivity(0, 1), connectivity(1, 0)));
+  connectivity_address_type const v1v2_hi(std::max(connectivity(0, 1), connectivity(1, 0)));
   for (typename std::map<std::pair<connectivity_address_type, connectivity_address_type>,
                          unsigned long>::const_iterator it(edge_types.begin());
        it != edge_types.end(); ++it) {
@@ -389,9 +412,21 @@ vcp<4, r, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
     if (temp_it != temp_edge_types.end()) {
       count -= temp_it->second;
       if (it->first.first == 0 && it->first.second == 0) {
+        // For the unconnected class, !bool(c01+c10) is 1 iff v1v2 is itself
+        // unconnected — the self-correction for that class. The trailing
+        // terms subtract pairs that can never be enumerated (both endpoints
+        // in V \ ({v1,v2} ∪ Γ(v1) ∪ Γ(v2))).
         count -= !static_cast<bool>(connectivity(0, 1) + connectivity(1, 0)) +
                  (2 + v3_count) * (g.vertex_count() - 2 - v3_count) - 3 * v4_count;
       }
+    }
+    // Self-correction for non-unconnected classes: edge_types counts v1v2
+    // itself if it has any directedness, so when the current class matches
+    // v1v2's own class, subtract 1. The unconnected class handles its own
+    // self-correction above via !bool(c01+c10).
+    if ((it->first.first != 0 || it->first.second != 0) && it->first.first == v1v2_lo &&
+        it->first.second == v1v2_hi) {
+      count -= 1;
     }
     counts.insert(std::make_pair(mapper.canonical_subgraph_address(connectivity), 0))
         .first->second += count;

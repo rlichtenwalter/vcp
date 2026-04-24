@@ -44,6 +44,12 @@ private:
   multirelational_graph<r> const &g;
   vcp_dynamic_mapper<4, r, false> mapper;
   std::map<connectivity_address_type, unsigned long> edge_types;
+  // Scratch buffer for v3 candidates accumulated during `generate_vector`.
+  // Allocated once per instance, reused across every call — which makes
+  // this class NOT thread-safe for shared-instance concurrent calls.
+  // Construct one `vcp<4, r, false>` per thread if parallelism is needed;
+  // the underlying graph is safe to share for read. See README "Thread
+  // safety" for the supported pattern.
   std::unique_ptr<std::pair<const_vertex_iterator, connectivity_matrix>[]> v3Vertices;
 };
 
@@ -106,7 +112,7 @@ vcp<4, r, false>::generate_vector(const_vertex_iterator v1, const_vertex_iterato
         ++gaps;
         v3Vertices_end->first = g.target_of(v2_neighbors_it);
         v3Vertices_end->second = connectivity;
-        v3Vertices_end->second(1, 2) = g.edge_value(v1_neighbors_it);
+        v3Vertices_end->second(1, 2) = g.edge_value(v2_neighbors_it);
         ++v3Vertices_end;
       }
       ++v2_neighbors_it;
@@ -140,7 +146,7 @@ vcp<4, r, false>::generate_vector(const_vertex_iterator v1, const_vertex_iterato
       ++gaps;
       v3Vertices_end->first = g.target_of(v2_neighbors_it);
       v3Vertices_end->second = connectivity;
-      v3Vertices_end->second(1, 2) = g.edge_value(v1_neighbors_it);
+      v3Vertices_end->second(1, 2) = g.edge_value(v2_neighbors_it);
       ++v3Vertices_end;
     }
     ++v2_neighbors_it;

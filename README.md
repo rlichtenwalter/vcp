@@ -179,6 +179,31 @@ Several design decisions that may not be obvious from the source:
   writing to an iterator range, a `std::array` reference, or a `std::vector`
   reference — RVO keeps the actual storage on the caller's stack.
 
+- **Thread safety.** The rule differs by specialization:
+
+  - `vcp<3, r, d>` — **safe** for shared-instance concurrent calls. The
+    class holds only a `const` reference to the graph; all per-call state
+    in `generate_vector` is stack-local.
+  - `vcp<4, r, d>` — **not safe** for shared-instance concurrent calls.
+    The class holds a `v3Vertices` scratch buffer allocated in the
+    constructor and reused across every call; concurrent calls would race
+    on the scratch and produce incorrect output.
+
+  Regardless of specialization, the underlying graph classes (`graph`,
+  `directed_graph`, `multirelational_graph`, `multirelational_directed_graph`)
+  are safe to share across threads for read-only access, provided no
+  thread is concurrently calling a mutating `operator>>`.
+
+  The **uniform pattern** — one `vcp<n, r, d>` instance per thread, shared
+  graph — is always safe and is the recommended default. Construction is
+  cheap; the only per-instance cost is the scratch allocation for the
+  `vcp<4, ...>` specializations (256 KB to 2 MB depending on `r`).
+
+  A future revision may expose a thread-safe scratch-handling option
+  (caller-managed scratch, `thread_local`, or similar) for the `vcp<4, ...>`
+  specializations if a concrete multithreaded use case emerges. The
+  `vcp<3, ...>` specializations need no such change.
+
 ## Dependencies
 
 - **Boost** (headers only) — for `boost::multiprecision::cpp_int`, used to

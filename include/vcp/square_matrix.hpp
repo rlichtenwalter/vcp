@@ -107,16 +107,16 @@ template <typename value_type>
 template <typename std::size_t n>
 square_matrix<value_type, 0>::square_matrix(square_matrix<value_type, n> const &matrix)
     : data(n * n) {
-  std::copy(&matrix(0, 0), &matrix(n - 1, n - 1), &data[0]);
+  std::copy(&matrix(0, 0), &matrix(0, 0) + n * n, &data[0]);
 }
 
 template <typename value_type>
 template <typename std::size_t n>
 square_matrix<value_type, 0> &
 square_matrix<value_type, 0>::operator=(square_matrix<value_type, n> const &matrix) {
-  if (this != &matrix) {
-    data.resize(n);
-    std::copy(&matrix.data[0], &matrix.data[n * n], &data[0]);
+  if (static_cast<void const *>(this) != static_cast<void const *>(&matrix)) {
+    data.resize(n * n);
+    std::copy(&matrix(0, 0), &matrix(0, 0) + n * n, &data[0]);
   }
   return *this;
 }

@@ -30,6 +30,12 @@ namespace vcp {
 
 template <std::size_t n, std::size_t r, bool d> class vcp;
 
+// Safe for shared-instance concurrent calls: this specialization holds
+// no mutable per-call state (all state in `generate_vector` is stack-local,
+// and the sole class member is a const reference to the graph). The
+// vcp<4, ...> specializations do NOT have this property because they carry
+// a scratch buffer. See README "Thread safety" for the supported pattern
+// and the per-specialization contract.
 template <std::size_t r> class vcp<3, r, false> {
 public:
   using graph_type = typename std::conditional<(r > 1), multirelational_graph<r>, graph>::type;

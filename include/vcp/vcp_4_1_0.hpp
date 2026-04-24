@@ -53,6 +53,12 @@ private:
   constexpr static const std::size_t num_structures = 64;
   static std::size_t element_address(std::size_t subgraph_address);
   unsigned long unconnected_pairs;
+  // Scratch buffer for v3 candidates accumulated during `generate_vector`.
+  // Allocated once per instance, reused across every call — which makes
+  // this class NOT thread-safe for shared-instance concurrent calls.
+  // Construct one `vcp<4, 1, false>` per thread if parallelism is needed;
+  // the underlying graph is safe to share for read. See README "Thread
+  // safety" for the supported pattern.
   std::unique_ptr<std::pair<const_vertex_iterator, unsigned char>[]> v3Vertices;
 };
 
@@ -168,21 +174,23 @@ std::array<unsigned long, vcp<4, 1, false>::element_count()> const inline vcp<
         if (it1->first < it2->first) { // to be a candidate vertex, the other v3 vertex must be
                                        // greater to avoid double counting
           ++gaps;
-          ++counts[element_address(it1->second +
-                                   (it2->second == v1v2 + V1V3
-                                        ? V1V4
-                                        : (it2->second == v1v2 + V2V3 ? V2V4 : V1V4 + V2V4)))];
+          // it2->second carries V1V3/V2V3 bits; promoting to v4-role requires
+          // re-encoding into V1V4/V2V4 slots. The equivalence
+          // `(it2->second - v1v2) << 1` holds because V1V4/V1V3 == V2V4/V2V3 == 2
+          // — the per-slot stride for (r=1, d=0) — so a single shift covers all
+          // three cases (V1V3-only → V1V4, V2V3-only → V2V4, both → V1V4+V2V4).
+          // Stride here is 2 (shift by 1) because the d=0 enum uses 1 bit per
+          // pair; vcp_4_1_1.hpp shifts by 2 because d=1 uses 2 bits per pair.
+          // If the connectivity_value enum layout ever changes, replace with
+          // the explicit form `V1V4 * ((it2->second - v1v2) / V1V3) + ...`.
+          ++counts[element_address(it1->second + ((it2->second - v1v2) << 1))];
         }
       } else { // there is an edge between the v3 vertex and the other v3 vertex serving as a v4
                // vertex
         if (it1->first < it2->first) { // to be a candidate vertex, the other v3 vertex must be
                                        // greater to avoid double counting
           ++connections;
-          ++counts[element_address(it1->second +
-                                   (it2->second == v1v2 + V1V3
-                                        ? V1V4
-                                        : (it2->second == v1v2 + V2V3 ? V2V4 : V1V4 + V2V4)) +
-                                   V3V4)];
+          ++counts[element_address(it1->second + ((it2->second - v1v2) << 1) + V3V4)];
         }
         ++v3_neighbors_it;
       }
@@ -218,6 +226,28 @@ std::array<unsigned long, vcp<4, 1, false>::element_count()> const inline vcp<
   // thus equivalent to: unconnected_pairs - (gaps + !static_cast<bool>(v1v2)) - 2*(g.vertex_count()
   // - 2 - v3_count - v4_count) - v3_count*(g.vertex_count() - 2 - v3_count) + v4_count we can
   // simplify this expression as below
+  // Debug-only guards for the K4-bidirectional-class underflow bug (see
+  // CHANGELOG entry for the K4 fix on the prior branch). Every operand is
+  // unsigned; a miscounted v3_count or v4_count would silently wrap one
+  // of the sub-expressions and poison this slot with a ~2**64 value.
+  // Guard each dangerous sub-expression — including `vertex_count - 2 - v3_count`
+  // which can itself underflow if v3_count > V-2 — then guard the combined
+  // RHS. Release build compiles these away under NDEBUG.
+#ifndef NDEBUG
+  {
+    assert(g.vertex_count() >= 2 + v3_count &&
+           "v3_count exceeds vertex_count - 2 (upstream miscounting)");
+    long long const V = static_cast<long long>(g.vertex_count());
+    long long const positive =
+        static_cast<long long>(unconnected_pairs) + static_cast<long long>(3 * v4_count);
+    long long const negative =
+        static_cast<long long>(gaps + !static_cast<bool>(v1v2)) +
+        static_cast<long long>((2 + v3_count) * (V - 2 - static_cast<long long>(v3_count)));
+    assert(positive >= negative && "unconnected_pairs subtraction chain underflowed");
+    assert(positive - negative <= static_cast<long long>(unconnected_pairs) &&
+           "unconnected_pairs subtraction chain overshot its upper bound");
+  }
+#endif
   counts[element_address(v1v2)] = unconnected_pairs - (gaps + !static_cast<bool>(v1v2)) -
                                   (2 + v3_count) * (g.vertex_count() - 2 - v3_count) + 3 * v4_count;
 
