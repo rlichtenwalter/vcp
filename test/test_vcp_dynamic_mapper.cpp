@@ -222,6 +222,36 @@ TEST_CASE("vcp_dynamic_mapper::canonical_subgraph_address collapses v3-v4 "
   REQUIRE(mapper.canonical_subgraph_address(a) == mapper.canonical_subgraph_address(b));
 }
 
+TEST_CASE("vcp_dynamic_mapper::element_structure on the zero address yields a zero matrix",
+          "[vcp_dynamic_mapper][regression]") {
+  // The decoder's `while (remaining > 0)` loop exits immediately when
+  // the address is 0, returning the value-initialized matrix (all zeros).
+  // This covers the empty-subgraph edge case the round-trip tests skip
+  // (fill_undirected seeds every slot with a nonzero value). A prior
+  // form of the decoder overwrote (0, 1) unconditionally before checking
+  // the loop condition; that form fails this test.
+  vcp::vcp_dynamic_mapper<4, 2, false> mapper;
+  auto const zero_matrix = mapper.element_structure(0);
+  for (std::size_t row(0); row < 4; ++row) {
+    for (std::size_t column(0); column < 4; ++column) {
+      REQUIRE(zero_matrix(row, column) == 0);
+    }
+  }
+}
+
+TEST_CASE("vcp_dynamic_mapper::subgraph_count matches 2^(n(n-1)r(d+1)/2) formula",
+          "[vcp_dynamic_mapper]") {
+  // subgraph_count is constexpr-able for (n, r, d) within size_t. Here
+  // we verify the formula for the small and mid-range cases relevant to
+  // the library (those that fit in std::size_t; larger parameters go
+  // through the boost::multiprecision path, which is tested by its own
+  // round-trip tests above).
+  REQUIRE(vcp::vcp_dynamic_mapper<3, 1, false>{}.subgraph_count() == 8);
+  REQUIRE(vcp::vcp_dynamic_mapper<3, 1, true>{}.subgraph_count() == 64);
+  REQUIRE(vcp::vcp_dynamic_mapper<4, 1, false>{}.subgraph_count() == 64);
+  REQUIRE(vcp::vcp_dynamic_mapper<4, 1, true>{}.subgraph_count() == 4096);
+}
+
 TEST_CASE("vcp_dynamic_mapper::canonical_subgraph_address is idempotent", "[vcp_dynamic_mapper]") {
   // Canonicalizing a canonical address should be a no-op. The canonical
   // address derives from element_structure only if the user explicitly
