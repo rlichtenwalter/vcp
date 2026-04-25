@@ -38,33 +38,157 @@ using edge_id_t = std::size_t;
 using const_vertex_iterator = void *const *;
 using const_edge_iterator = void *const *;
 
+/**
+ * @brief Undirected multirelational graph in CSR format with per-edge relation bitmasks.
+ *
+ * Extends `graph` to support `r` independent edge relations. Each edge stores
+ * an `r`-bit bitmask (`connectivity_address_type`) where bit `k` is set if
+ * relation `k` is active on that edge. The CSR structure is identical to
+ * `graph`; an auxiliary `edge_values` array holds the bitmask for each edge slot.
+ *
+ * For `r <= CHAR_BIT * sizeof(std::size_t)` (typically 64), the bitmask fits
+ * in a `std::size_t` and no external library is needed. For larger `r` a
+ * fixed-width Boost.Multiprecision unsigned integer is used instead.
+ *
+ * The text format extends `graph`'s format: each neighbor is written as
+ * `<target_id>,<bitmask>`, with neighbors separated by spaces.
+ *
+ * @tparam r Maximum number of edge relations (capacity); the actual number
+ *           of active relations in a loaded graph may be less.
+ */
 template <std::size_t r> class multirelational_graph {
 public:
+  /**
+   * @brief Unsigned integer type that holds an r-bit edge connectivity bitmask.
+   *
+   * Resolves to `std::size_t` when r fits within a machine word, and to a
+   * fixed-width Boost.Multiprecision unsigned integer otherwise.
+   */
   using connectivity_address_type = typename std::conditional<
       r <= CHAR_BIT * sizeof(std::size_t), std::size_t,
       boost::multiprecision::number<
           boost::multiprecision::cpp_int_backend<r, r, boost::multiprecision::unsigned_magnitude,
                                                  boost::multiprecision::unchecked, void>>>::type;
+
+  /** @brief Construct an empty graph with no vertices or edges. */
   multirelational_graph();
+
+  /** @brief Copy-construct a graph, deep-copying CSR arrays and edge-value array. */
   multirelational_graph(multirelational_graph const &);
+
   ~multirelational_graph();
+
+  /** @brief Copy-assign a graph, deep-copying CSR arrays and edge-value array. */
   multirelational_graph &operator=(multirelational_graph const &);
+
+  /** @brief Return the number of vertices. */
   std::size_t vertex_count() const;
+
+  /** @brief Return the number of undirected edges (each pair counted once). */
   std::size_t edge_count() const;
+
+  /**
+   * @brief Return the number of active relations in the loaded graph.
+   *
+   * Counts the minimum number of relation bits needed to represent the
+   * highest-valued edge bitmask. This is a property of the data, not of
+   * the template parameter `r` (which is the capacity). Returns 0 for an
+   * empty graph or one whose edges all have bitmask 0.
+   */
   std::size_t relation_count() const;
+
+  /** @brief Return an iterator to the first vertex. */
   const_vertex_iterator vertices_begin() const;
+
+  /** @brief Return a past-the-end iterator for vertices. */
   const_vertex_iterator vertices_end() const;
+
+  /** @brief Return an iterator to the first edge slot in the CSR edge array. */
   const_edge_iterator edges_begin() const;
+
+  /** @brief Return a past-the-end iterator for the CSR edge array. */
   const_edge_iterator edges_end() const;
-  const_edge_iterator neighbors_begin(const_vertex_iterator) const;
-  const_edge_iterator neighbors_end(const_vertex_iterator) const;
-  vertex_id_t vertex_id(const_vertex_iterator) const;
-  const_vertex_iterator target_of(const_edge_iterator) const;
-  edge_id_t edge_id(const_edge_iterator) const;
-  bool edge_exists(const_edge_iterator) const;
-  const_edge_iterator edge(const_vertex_iterator, const_vertex_iterator) const;
-  connectivity_address_type edge_value(const_edge_iterator) const;
-  bool edge_exists(const_vertex_iterator, const_vertex_iterator) const;
+
+  /**
+   * @brief Return an iterator to the first neighbor of the given vertex.
+   *
+   * @param it Iterator to a vertex in this graph.
+   * @return Iterator to the first neighbor edge slot.
+   */
+  const_edge_iterator neighbors_begin(const_vertex_iterator it) const;
+
+  /**
+   * @brief Return a past-the-end iterator for the neighbors of the given vertex.
+   *
+   * @param it Iterator to a vertex in this graph.
+   * @return Past-the-end iterator for the neighbor range.
+   */
+  const_edge_iterator neighbors_end(const_vertex_iterator it) const;
+
+  /**
+   * @brief Return the integer id of the given vertex.
+   *
+   * @param it Vertex iterator obtained from this graph.
+   * @return Zero-based vertex identifier.
+   */
+  vertex_id_t vertex_id(const_vertex_iterator it) const;
+
+  /**
+   * @brief Return the vertex pointed to by an edge iterator.
+   *
+   * @param it Edge iterator within a neighbor range.
+   * @return Iterator to the target vertex of the edge.
+   */
+  const_vertex_iterator target_of(const_edge_iterator it) const;
+
+  /**
+   * @brief Return the integer id of the given edge slot.
+   *
+   * @param it Edge iterator obtained from this graph.
+   * @return Zero-based offset of @p it within the CSR edge array.
+   */
+  edge_id_t edge_id(const_edge_iterator it) const;
+
+  /**
+   * @brief Return true if @p it refers to an existing edge (i.e., is not edges_end()).
+   *
+   * @param it Edge iterator to test.
+   * @return True if @p it != edges_end().
+   */
+  bool edge_exists(const_edge_iterator it) const;
+
+  /**
+   * @brief Find the edge between two vertices and return an iterator to it.
+   *
+   * Performs a linear search through @p source's neighbor list. Returns
+   * edges_end() if no edge exists.
+   *
+   * @param source Iterator to the source vertex.
+   * @param target Iterator to the target vertex.
+   * @return Iterator to the edge, or edges_end() if absent.
+   */
+  const_edge_iterator edge(const_vertex_iterator source, const_vertex_iterator target) const;
+
+  /**
+   * @brief Return the relation bitmask stored on the edge at @p it.
+   *
+   * Returns 0 if @p it equals edges_end() (the "no edge" sentinel), matching
+   * the convention used by VCP algorithms that call this without a null check.
+   *
+   * @param it Edge iterator within the CSR edge array.
+   * @return The r-bit relation bitmask, or 0 if @p it == edges_end().
+   */
+  connectivity_address_type edge_value(const_edge_iterator it) const;
+
+  /**
+   * @brief Return true if an edge exists between @p source and @p target.
+   *
+   * @param source Iterator to the source vertex.
+   * @param target Iterator to the target vertex.
+   * @return True if the edge is present.
+   */
+  bool edge_exists(const_vertex_iterator source, const_vertex_iterator target) const;
+
   template <std::size_t r_>
   friend std::ostream &operator<<(std::ostream &, multirelational_graph<r_> const &);
   template <std::size_t r_>
@@ -226,6 +350,18 @@ bool multirelational_graph<r>::edge_exists(const_vertex_iterator source,
   return neighbors_end(source) != std::find(neighbors_begin(source), neighbors_end(source), target);
 }
 
+/**
+ * @brief Write a multirelational graph to an output stream.
+ *
+ * Emits one line per vertex. Each neighbor is written as `<id>,<bitmask>`
+ * with neighbors separated by spaces. An isolated vertex produces an empty line.
+ * The format matches the input accepted by `operator>>`.
+ *
+ * @tparam r Number of edge relation bits.
+ * @param os Output stream.
+ * @param g  Graph to write.
+ * @return Reference to @p os.
+ */
 template <std::size_t r>
 std::ostream &operator<<(std::ostream &os, multirelational_graph<r> const &g) {
   for (const_vertex_iterator vIt = g.vertices_begin(); vIt != g.vertices_end(); ++vIt) {
@@ -242,6 +378,18 @@ std::ostream &operator<<(std::ostream &os, multirelational_graph<r> const &g) {
   return os;
 }
 
+/**
+ * @brief Read a multirelational graph from an input stream.
+ *
+ * Expects one line per vertex with space-separated entries of the form
+ * `<neighbor_id>,<bitmask>`. Each undirected edge must appear in both
+ * directions. An empty line represents an isolated vertex.
+ *
+ * @tparam r Number of edge relation bits.
+ * @param is Input stream positioned at the first vertex line.
+ * @param g  Graph object to populate; any previous contents are replaced.
+ * @return Reference to @p is.
+ */
 template <std::size_t r> std::istream &operator>>(std::istream &is, multirelational_graph<r> &g) {
   std::vector<edge_id_t> v_temp;
   std::vector<std::pair<vertex_id_t, typename multirelational_graph<r>::connectivity_address_type>>

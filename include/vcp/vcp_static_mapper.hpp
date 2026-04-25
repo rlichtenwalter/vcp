@@ -28,21 +28,113 @@ Profiles code base. If not, see <http://www.gnu.org/licenses/>.
 
 namespace vcp {
 
+/**
+ * @brief Precomputed lookup-table mapper from subgraph addresses to canonical element addresses.
+ *
+ * At construction time, all 2^(n*(n-1)*r*(d+1)/2) subgraph encodings are enumerated
+ * and grouped by isomorphism class. Each class is assigned a dense element address
+ * starting at 0. The result is a flat `map` vector that converts any subgraph address
+ * to its canonical element address in O(1).
+ *
+ * This is faster than `vcp_dynamic_mapper` for repeated lookups, but requires
+ * O(subgraph_count) memory at construction time. For large `n`, `r`, or `d`
+ * the table size may be prohibitive; `vcp_dynamic_mapper` is the alternative.
+ *
+ * Parameters `n`, `r`, `d` are runtime values, which is why this class uses
+ * dynamic (`square_matrix<std::size_t>`) rather than fixed-size matrices.
+ */
 class vcp_static_mapper {
 public:
+  /**
+   * @brief Return the total number of distinct subgraph addresses for the given parameters.
+   *
+   * Equal to 2^(n*(n-1)*r*(d+1)/2). This is the size of the internal lookup table.
+   *
+   * @param n Number of vertices in each subgraph.
+   * @param r Number of edge relations.
+   * @param d True for directed; false for undirected.
+   * @return Total number of subgraph addresses.
+   */
   static std::size_t subgraph_count(std::size_t n, std::size_t r, bool d);
+
+  /**
+   * @brief Construct the mapper and build the full isomorphism lookup table.
+   *
+   * Enumerates all subgraph encodings and assigns canonical element addresses.
+   * Construction time is O(subgraph_count * n!) due to the permutation search.
+   *
+   * @param n Number of vertices in each subgraph.
+   * @param r Number of edge relations.
+   * @param d True for directed; false for undirected.
+   */
   vcp_static_mapper(std::size_t n, std::size_t r, bool d);
+
+  /** @brief Return the subgraph vertex count. */
   std::size_t n() const;
+
+  /** @brief Return the number of edge relations. */
   std::size_t r() const;
+
+  /** @brief Return true if the mapper was constructed for directed graphs. */
   bool d() const;
+
+  /**
+   * @brief Compute the subgraph address for the given fixed-size connectivity matrix.
+   *
+   * @tparam n Side length of the connectivity matrix.
+   * @param connectivity n × n matrix of edge relation values.
+   * @return Packed subgraph address integer.
+   */
   template <std::size_t n>
   std::size_t subgraph_address(square_matrix<std::size_t, n> const &connectivity) const;
+
+  /**
+   * @brief Compute the canonical element address for the given fixed-size connectivity matrix.
+   *
+   * @tparam n Side length of the connectivity matrix.
+   * @param connectivity n × n matrix of edge relation values.
+   * @return Canonical element address in [0, element_count).
+   */
   template <std::size_t n>
   std::size_t element_address(square_matrix<std::size_t, n> const &connectivity) const;
+
+  /**
+   * @brief Compute the subgraph address for the given dynamic connectivity matrix.
+   *
+   * @param connectivity Dynamic square matrix of edge relation values.
+   * @return Packed subgraph address integer.
+   */
   std::size_t subgraph_address(square_matrix<std::size_t> const &connectivity) const;
+
+  /**
+   * @brief Compute the canonical element address for the given dynamic connectivity matrix.
+   *
+   * @param connectivity Dynamic square matrix of edge relation values.
+   * @return Canonical element address in [0, element_count).
+   */
   std::size_t element_address(square_matrix<std::size_t> const &connectivity) const;
+
+  /**
+   * @brief Look up the canonical element address from a precomputed subgraph address.
+   *
+   * O(1) table lookup; the index must be in [0, subgraph_count()).
+   *
+   * @param subgraph_address Packed subgraph address previously computed by subgraph_address().
+   * @return Canonical element address.
+   */
   std::size_t element_address(std::size_t subgraph_address) const;
+
+  /**
+   * @brief Reconstruct the connectivity matrix for the given element address.
+   *
+   * Decodes the element address back into a dynamic square matrix. The
+   * returned matrix is one canonical representative of the isomorphism class.
+   *
+   * @param element_address Canonical element address in [0, element_count).
+   * @return Connectivity matrix reconstructed from the element address.
+   */
   square_matrix<std::size_t> element_structure(std::size_t element_address) const;
+
   friend std::ostream &operator<<(std::ostream &os, vcp_static_mapper const &mapper);
 
 private:
@@ -199,6 +291,17 @@ inline square_matrix<std::size_t> vcp_static_mapper::element_structure(std::size
   return matrix;
 }
 
+/**
+ * @brief Write the full element-address lookup table to an output stream.
+ *
+ * Emits one element address per line in subgraph-address order, from 0 to
+ * subgraph_count() - 1. Useful for debugging and for cross-checking against
+ * independently computed VCP element mappings.
+ *
+ * @param os     Output stream.
+ * @param mapper Mapper whose table is to be written.
+ * @return Reference to @p os.
+ */
 inline std::ostream &operator<<(std::ostream &os, vcp_static_mapper const &mapper) {
   std::copy(mapper.map.begin(), mapper.map.end(), std::ostream_iterator<std::size_t>(os, "\n"));
   return os;

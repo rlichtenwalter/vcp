@@ -36,12 +36,55 @@ template <std::size_t n, std::size_t r, bool d> class vcp;
 // vcp<4, ...> specializations do NOT have this property because they carry
 // a scratch buffer. See README "Thread safety" for the supported pattern
 // and the per-specialization contract.
+
+/**
+ * @brief Partial specialization of vcp for 3-vertex subgraphs on a multirelational undirected
+ * graph.
+ *
+ * Handles any number of edge relations r >= 1 using a sorted-merge approach
+ * over undirected neighbor lists. The result is a sparse map from canonical
+ * subgraph address to count; sparsity increases with r because most of the
+ * 2^(3r) possible edge-relation combinations appear rarely or never.
+ *
+ * This specialization is safe for shared-instance concurrent calls because
+ * `generate_vector` holds no mutable class state.
+ *
+ * @tparam r Number of edge relations (bits per undirected edge).
+ */
 template <std::size_t r> class vcp<3, r, false> {
 public:
+  /**
+   * @brief Graph type: `multirelational_graph<r>` for r > 1, or `graph` for r == 1.
+   */
   using graph_type = typename std::conditional<(r > 1), multirelational_graph<r>, graph>::type;
+
+  /**
+   * @brief Unsigned integer type that holds an r-bit edge connectivity bitmask.
+   */
   using connectivity_address_type = typename multirelational_graph<r>::connectivity_address_type;
+
+  /**
+   * @brief Unsigned integer type that encodes a complete 3-vertex subgraph address.
+   */
   using subgraph_address_type = typename vcp_dynamic_mapper<3, r, false>::subgraph_address_type;
+
+  /**
+   * @brief Construct the VCP calculator bound to the given graph.
+   *
+   * @param g Undirected graph to analyze; must outlive this object.
+   */
   vcp(graph_type const &g);
+
+  /**
+   * @brief Compute the VCP feature vector for the pivot pair (v1, v2).
+   *
+   * Returns a sparse map from canonical subgraph address to count. The sum
+   * of all counts equals |V| - 2.
+   *
+   * @param v1 Iterator to the first pivot vertex.
+   * @param v2 Iterator to the second pivot vertex.
+   * @return Sparse map from canonical subgraph address to occurrence count.
+   */
   std::map<subgraph_address_type, unsigned long> const generate_vector(const_vertex_iterator v1,
                                                                        const_vertex_iterator v2);
 

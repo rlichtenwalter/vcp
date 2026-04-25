@@ -29,13 +29,57 @@ namespace vcp {
 
 template <std::size_t n, std::size_t r, bool d> class vcp;
 
+/**
+ * @brief Full specialization of vcp for 4-vertex subgraphs on a single-relation directed graph.
+ *
+ * Extends the `vcp<4, 1, false>` two-phase approach to directed graphs by
+ * tracking three directedness categories (asymmetric-out, asymmetric-in, mutual)
+ * separately. Exactly 2112 element classes exist for this configuration.
+ *
+ * The constructor precomputes global counts of asymmetric and mutual vertex
+ * pairs, which are used to fill the least-connected element slots without
+ * exhaustive enumeration.
+ *
+ * This specialization is NOT safe for shared-instance concurrent calls
+ * because `generate_vector` uses the `v3Vertices` scratch buffer held as a
+ * class member. Construct one `vcp<4, 1, true>` per thread.
+ */
 template <> class vcp<4, 1, true> {
 private:
   constexpr static const std::size_t num_elements = 2112;
 
 public:
-  vcp(directed_graph const &);
+  /**
+   * @brief Construct the VCP calculator bound to the given graph.
+   *
+   * Precomputes global counts of connected, asymmetric-mutual, mutual, and
+   * unconnected vertex pairs. These precomputed values let `generate_vector`
+   * fill the three "least-connected" element slots by subtraction rather
+   * than exhaustive enumeration.
+   *
+   * @param g Directed graph to analyze; must outlive this object.
+   */
+  vcp(directed_graph const &g);
+
+  /**
+   * @brief Return the number of VCP element classes for this specialization.
+   *
+   * Always 2112 for (n=4, r=1, d=true).
+   *
+   * @return 2112.
+   */
   constexpr static std::size_t element_count();
+
+  /**
+   * @brief Compute the VCP feature vector for the pivot pair (v1, v2).
+   *
+   * Returns a fixed-size array of 2112 counts. The sum of all counts equals
+   * C(|V|-2, 2).
+   *
+   * @param v1 Iterator to the first pivot vertex.
+   * @param v2 Iterator to the second pivot vertex.
+   * @return Array of 2112 occurrence counts indexed by element address.
+   */
   std::array<unsigned long, num_elements> const generate_vector(const_vertex_iterator v1,
                                                                 const_vertex_iterator v2);
 

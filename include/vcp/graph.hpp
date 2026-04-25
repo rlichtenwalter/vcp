@@ -32,31 +32,146 @@ Profiles code base. If not, see <http://www.gnu.org/licenses/>.
 
 namespace vcp {
 
+/** @brief Integer type used to identify a vertex by its position in the CSR arrays. */
 using vertex_id_t = std::size_t;
+
+/** @brief Integer type used to identify an edge by its position in the CSR arrays. */
 using edge_id_t = std::size_t;
+
+/**
+ * @brief Opaque iterator type over vertices in the CSR layout.
+ *
+ * Internally a pointer-to-pointer; advance with `++` to move to the next
+ * vertex. The difference of two vertex iterators equals the vertex-id gap.
+ */
 using const_vertex_iterator = void *const *;
+
+/**
+ * @brief Opaque iterator type over edges (or neighbor lists) in the CSR layout.
+ *
+ * Internally a pointer-to-pointer; advance with `++` to move to the next
+ * edge slot. The range [neighbors_begin(v), neighbors_end(v)) gives all
+ * neighbors of vertex @p v.
+ */
 using const_edge_iterator = void *const *;
 
+/**
+ * @brief Undirected graph in compressed sparse row (CSR) format.
+ *
+ * Each undirected edge {u, v} is stored twice: once in u's adjacency list
+ * and once in v's. The `vertices` array holds `vertex_count() + 1`
+ * pointers into `edges`; `edges` holds `2 * edge_count()` pointers back
+ * into `vertices`. This pointer-based CSR avoids index arithmetic and
+ * enables O(1) neighbor-range access without index recomputation.
+ *
+ * Graphs are populated by reading from a stream via `operator>>`.
+ * The text format is one line per vertex containing space-separated
+ * neighbor ids (0-based), with an empty line representing an isolated vertex.
+ *
+ * Neighbor lists are expected to be sorted; the `vcp<3, 1, false>` and
+ * `vcp<4, 1, false>` specializations rely on sorted adjacency for their
+ * merge-based enumeration.
+ */
 class graph {
 public:
+  /** @brief Construct an empty graph with no vertices or edges. */
   graph();
+
+  /** @brief Copy-construct a graph, deep-copying both CSR arrays. */
   graph(graph const &);
+
+  /** @brief Copy-assign a graph, deep-copying both CSR arrays. */
   graph &operator=(graph const &);
+
   ~graph();
+
+  /** @brief Return the number of vertices. */
   std::size_t vertex_count() const;
+
+  /** @brief Return the number of undirected edges (each pair counted once). */
   std::size_t edge_count() const;
+
+  /** @brief Return an iterator to the first vertex. */
   const_vertex_iterator vertices_begin() const;
+
+  /** @brief Return a past-the-end iterator for vertices. */
   const_vertex_iterator vertices_end() const;
+
+  /** @brief Return an iterator to the first edge slot in the CSR edge array. */
   const_edge_iterator edges_begin() const;
+
+  /** @brief Return a past-the-end iterator for the CSR edge array. */
   const_edge_iterator edges_end() const;
-  const_edge_iterator neighbors_begin(const_vertex_iterator) const;
-  const_edge_iterator neighbors_end(const_vertex_iterator) const;
-  vertex_id_t vertex_id(const_vertex_iterator) const;
-  const_vertex_iterator target_of(const_edge_iterator) const;
-  edge_id_t edge_id(const_edge_iterator) const;
-  bool edge_exists(const_edge_iterator) const;
-  const_edge_iterator edge(const_vertex_iterator, const_vertex_iterator) const;
-  bool edge_exists(const_vertex_iterator, const_vertex_iterator) const;
+
+  /**
+   * @brief Return an iterator to the first neighbor of the given vertex.
+   *
+   * @param it Iterator to a vertex in this graph.
+   * @return Iterator to the first neighbor edge slot.
+   */
+  const_edge_iterator neighbors_begin(const_vertex_iterator it) const;
+
+  /**
+   * @brief Return a past-the-end iterator for the neighbors of the given vertex.
+   *
+   * @param it Iterator to a vertex in this graph.
+   * @return Past-the-end iterator for the neighbor range.
+   */
+  const_edge_iterator neighbors_end(const_vertex_iterator it) const;
+
+  /**
+   * @brief Return the integer id of the given vertex.
+   *
+   * @param it Vertex iterator obtained from this graph.
+   * @return Zero-based vertex identifier equal to the iterator's offset from vertices_begin().
+   */
+  vertex_id_t vertex_id(const_vertex_iterator it) const;
+
+  /**
+   * @brief Return the vertex pointed to by an edge iterator.
+   *
+   * @param it Edge iterator within a neighbor range.
+   * @return Iterator to the target vertex of the edge.
+   */
+  const_vertex_iterator target_of(const_edge_iterator it) const;
+
+  /**
+   * @brief Return the integer id of the given edge slot.
+   *
+   * @param it Edge iterator obtained from this graph.
+   * @return Zero-based offset of @p it within the CSR edge array.
+   */
+  edge_id_t edge_id(const_edge_iterator it) const;
+
+  /**
+   * @brief Return true if @p it refers to an existing edge (i.e., is not edges_end()).
+   *
+   * @param it Edge iterator to test.
+   * @return True if @p it != edges_end().
+   */
+  bool edge_exists(const_edge_iterator it) const;
+
+  /**
+   * @brief Find the edge between two vertices and return an iterator to it.
+   *
+   * Performs a linear search through @p source's neighbor list. Returns
+   * edges_end() if no edge exists.
+   *
+   * @param source Iterator to the source vertex.
+   * @param target Iterator to the target vertex.
+   * @return Iterator to the edge, or edges_end() if absent.
+   */
+  const_edge_iterator edge(const_vertex_iterator source, const_vertex_iterator target) const;
+
+  /**
+   * @brief Return true if an edge exists between @p source and @p target.
+   *
+   * @param source Iterator to the source vertex.
+   * @param target Iterator to the target vertex.
+   * @return True if the edge is present.
+   */
+  bool edge_exists(const_vertex_iterator source, const_vertex_iterator target) const;
+
   friend std::ostream &operator<<(std::ostream &, graph const &);
   friend std::istream &operator>>(std::istream &, graph &);
 
@@ -154,6 +269,17 @@ inline bool graph::edge_exists(const_vertex_iterator source, const_vertex_iterat
   return neighbors_end(source) != std::find(neighbors_begin(source), neighbors_end(source), target);
 }
 
+/**
+ * @brief Write a graph to an output stream.
+ *
+ * Emits one line per vertex containing space-separated neighbor ids. An
+ * isolated vertex produces an empty line. The format is the same as that
+ * accepted by `operator>>`.
+ *
+ * @param os Output stream.
+ * @param g  Graph to write.
+ * @return Reference to @p os.
+ */
 inline std::ostream &operator<<(std::ostream &os, graph const &g) {
   for (const_vertex_iterator vIt = g.vertices_begin(); vIt != g.vertices_end(); ++vIt) {
     const_edge_iterator const nBegin = g.neighbors_begin(vIt);
@@ -169,6 +295,19 @@ inline std::ostream &operator<<(std::ostream &os, graph const &g) {
   return os;
 }
 
+/**
+ * @brief Read a graph from an input stream.
+ *
+ * Expects one line per vertex with space-separated neighbor ids (0-based).
+ * Each undirected edge must appear in both directions (i.e., if vertex u
+ * lists v as a neighbor, v must also list u). An empty line represents an
+ * isolated vertex.
+ *
+ * @param is Input stream positioned at the first vertex line.
+ * @param g  Graph object to populate; any previous contents are replaced.
+ * @return Reference to @p is.
+ * @throws std::invalid_argument If a token cannot be parsed as a vertex id.
+ */
 inline std::istream &operator>>(std::istream &is, graph &g) {
   std::vector<edge_id_t> v_temp;
   std::vector<vertex_id_t> e_temp;

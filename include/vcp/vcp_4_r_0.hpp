@@ -36,11 +36,56 @@ namespace vcp {
 
 template <std::size_t n, std::size_t r, bool d> class vcp;
 
+/**
+ * @brief Partial specialization of vcp for 4-vertex subgraphs on a multirelational undirected
+ *        graph.
+ *
+ * Extends the `vcp<4, 1, false>` two-phase algorithm to multirelational graphs.
+ * The constructor builds a global edge-type histogram keyed by r-bit relation
+ * bitmask; `generate_vector` uses it to fill the least-connected element classes
+ * by subtraction. An internal `vcp_dynamic_mapper` canonicalizes subgraph addresses.
+ *
+ * The `edge_types` and `temp_edge_types` maps use a two-tier
+ * `detail::dense_or_sparse_map` for performance: a heap-backed array for small r
+ * (r <= 20) and an unordered map for larger r.
+ *
+ * This specialization is NOT safe for shared-instance concurrent calls because
+ * `generate_vector` uses the `v3Vertices` scratch buffer and `temp_edge_types`
+ * map held as class members. Construct one instance per thread.
+ *
+ * @tparam r Number of edge relations.
+ */
 template <std::size_t r> class vcp<4, r, false> {
 public:
+  /**
+   * @brief Unsigned integer type that holds an r-bit edge connectivity bitmask.
+   */
   using connectivity_address_type = typename multirelational_graph<r>::connectivity_address_type;
+
+  /**
+   * @brief Unsigned integer type that encodes a complete 4-vertex undirected subgraph address.
+   */
   using subgraph_address_type = typename vcp_dynamic_mapper<4, r, false>::subgraph_address_type;
+
+  /**
+   * @brief Construct the VCP calculator bound to the given graph.
+   *
+   * Builds the global edge-type histogram and allocates the v3 scratch buffer.
+   *
+   * @param g Multirelational undirected graph to analyze; must outlive this object.
+   */
   vcp(multirelational_graph<r> const &g);
+
+  /**
+   * @brief Compute the VCP feature vector for the pivot pair (v1, v2).
+   *
+   * Returns a sparse map from canonical subgraph address to count. The sum
+   * of all counts equals C(|V|-2, 2).
+   *
+   * @param v1 Iterator to the first pivot vertex.
+   * @param v2 Iterator to the second pivot vertex.
+   * @return Sparse map from canonical subgraph address to occurrence count.
+   */
   std::map<subgraph_address_type, unsigned long> const generate_vector(const_vertex_iterator v1,
                                                                        const_vertex_iterator v2);
 
