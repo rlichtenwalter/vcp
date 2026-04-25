@@ -9,6 +9,7 @@
 #include <iterator>
 #include <limits>
 #include <ostream>
+#include <ranges>
 #include <stdexcept>
 #include <vcp/square_matrix.hpp>
 #include <vector>
@@ -294,7 +295,7 @@ inline square_matrix<std::size_t> vcp_static_mapper::element_structure(std::size
  * @return Reference to @p os.
  */
 inline std::ostream &operator<<(std::ostream &os, vcp_static_mapper const &mapper) {
-  std::copy(mapper.map.begin(), mapper.map.end(), std::ostream_iterator<std::size_t>(os, "\n"));
+  std::ranges::copy(mapper.map, std::ostream_iterator<std::size_t>(os, "\n"));
   return os;
 }
 

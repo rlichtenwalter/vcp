@@ -38,7 +38,9 @@ TEST_CASE("fixed-size square_matrix write/read round-trip", "[square_matrix]") {
   }
   for (std::size_t row = 0; row < 4; ++row) {
     for (std::size_t col = 0; col < 4; ++col) {
-      REQUIRE(m(row, col) == static_cast<int>(10 * row + col));
+      int const expected = static_cast<int>(10 * row + col);
+      int const actual = m(row, col);
+      REQUIRE(actual == expected);
     }
   }
 }
@@ -94,7 +96,9 @@ TEST_CASE("dynamic square_matrix write/read round-trip", "[square_matrix]") {
   }
   for (std::size_t row = 0; row < 4; ++row) {
     for (std::size_t col = 0; col < 4; ++col) {
-      REQUIRE(m(row, col) == static_cast<int>(100 * row + col));
+      int const expected = static_cast<int>(100 * row + col);
+      int const actual = m(row, col);
+      REQUIRE(actual == expected);
     }
   }
 }
