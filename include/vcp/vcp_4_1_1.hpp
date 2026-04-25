@@ -8,6 +8,7 @@
 #include <cassert>
 #include <cstddef>
 #include <utility>
+#include <vcp/detail/v3_buffer_bound.hpp>
 #include <vcp/directed_graph.hpp>
 
 namespace vcp {
@@ -389,7 +390,7 @@ constexpr std::size_t vcp<4, 1, true>::element_count() { return num_elements; }
 
 inline vcp<4, 1, true>::vcp(directed_graph const &g)
     : g(g), v3Vertices(std::make_unique<std::pair<const_vertex_iterator, unsigned short>[]>(
-                MAX_NEIGHBORS)) {
+                detail::top_two_neighborhood_size_directed(g))) {
   // compute the total number of somehow-connected pairs in the graph
   for (const_vertex_iterator it(g.vertices_begin()); it != g.vertices_end(); ++it) {
     const_edge_iterator outIt = g.out_neighbors_begin(it);
@@ -469,10 +470,6 @@ std::array<unsigned long, vcp<4, 1, true>::element_count()> const inline vcp<
   const_edge_iterator v2_out_neighbors_end(g.out_neighbors_end(v2));
   const_edge_iterator v2_in_neighbors_it(g.in_neighbors_begin(v2));
   const_edge_iterator v2_in_neighbors_end(g.in_neighbors_end(v2));
-  assert(MAX_NEIGHBORS > (v1_out_neighbors_end - v1_out_neighbors_it) +
-                             (v1_in_neighbors_end - v1_in_neighbors_it) +
-                             (v2_out_neighbors_end - v2_out_neighbors_it) +
-                             (v2_in_neighbors_end - v2_in_neighbors_it));
   std::pair<const_vertex_iterator, unsigned short> *v3Vertices_begin(&v3Vertices[0]);
   std::pair<const_vertex_iterator, unsigned short> *v3Vertices_end(&v3Vertices[0]);
   std::pair<const_edge_iterator, directedness_value> min1(next_union_element(

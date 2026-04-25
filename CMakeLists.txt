@@ -20,10 +20,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include(GNUInstallDirs)
 include(FetchContent)
 
-# --- User-configurable parameters ---
-set(VCP_MAX_NEIGHBORS 16384 CACHE STRING
-    "Maximum number of neighbors per vertex (compile-time upper bound for buffer allocation)")
-
 # --- Dependencies ---
 # Boost (headers-only; uses boost/multiprecision/cpp_int.hpp).
 find_package(Boost REQUIRED)
@@ -49,8 +45,6 @@ target_include_directories(vcp INTERFACE
 
 target_link_libraries(vcp INTERFACE Boost::headers)
 
-target_compile_definitions(vcp INTERFACE MAX_NEIGHBORS=${VCP_MAX_NEIGHBORS})
-
 set(VCP_PUBLIC_HEADERS
     include/vcp/directed_graph.hpp
     include/vcp/graph.hpp
@@ -68,6 +62,8 @@ set(VCP_PUBLIC_HEADERS
     include/vcp/vcp_4_r_1.hpp
     include/vcp/vcp_dynamic_mapper.hpp
     include/vcp/vcp_static_mapper.hpp
+    include/vcp/detail/dense_or_sparse_map.hpp
+    include/vcp/detail/v3_buffer_bound.hpp
 )
 
 target_sources(vcp INTERFACE

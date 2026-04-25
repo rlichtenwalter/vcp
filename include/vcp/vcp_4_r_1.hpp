@@ -4,11 +4,11 @@
 #ifndef VCP_VCP_4_R_1_HPP
 #define VCP_VCP_4_R_1_HPP
 
-#include <cassert>
 #include <cstddef>
 #include <map>
 #include <utility>
 #include <vcp/detail/dense_or_sparse_map.hpp>
+#include <vcp/detail/v3_buffer_bound.hpp>
 #include <vcp/multirelational_directed_graph.hpp>
 #include <vcp/square_matrix.hpp>
 #include <vcp/vcp_dynamic_mapper.hpp>
@@ -105,7 +105,7 @@ template <std::size_t r>
 vcp<4, r, true>::vcp(multirelational_directed_graph<r> const &g)
     : g(g), mapper(),
       v3Vertices(std::make_unique<std::pair<const_vertex_iterator, connectivity_matrix>[]>(
-          MAX_NEIGHBORS)) {
+          detail::top_two_neighborhood_size_directed(g))) {
   // (0, 0) is the unconnected class — seed its count with the number
   // of unordered pairs and decrement per real edge, same pattern as
   // vcp_4_r_0's undirected ctor.
@@ -218,10 +218,6 @@ vcp<4, r, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
   const_edge_iterator v2_out_neighbors_end(g.out_neighbors_end(v2));
   const_edge_iterator v2_in_neighbors_it(g.in_neighbors_begin(v2));
   const_edge_iterator v2_in_neighbors_end(g.in_neighbors_end(v2));
-  assert(MAX_NEIGHBORS > (v1_out_neighbors_end - v1_out_neighbors_it) +
-                             (v1_in_neighbors_end - v1_in_neighbors_it) +
-                             (v2_out_neighbors_end - v2_out_neighbors_it) +
-                             (v2_in_neighbors_end - v2_in_neighbors_it));
   std::pair<const_vertex_iterator, connectivity_matrix> *v3Vertices_begin(&v3Vertices[0]);
   std::pair<const_vertex_iterator, connectivity_matrix> *v3Vertices_end(&v3Vertices[0]);
   // `next_union_element` returns end2 on exhaustion (see its final else
