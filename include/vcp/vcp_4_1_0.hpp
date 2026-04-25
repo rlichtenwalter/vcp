@@ -237,7 +237,7 @@ std::array<unsigned long, vcp<4, 1, false>::element_count()> const inline vcp<
   {
     assert(g.vertex_count() >= 2 + v3_count &&
            "v3_count exceeds vertex_count - 2 (upstream miscounting)");
-    long long const V = static_cast<long long>(g.vertex_count());
+    auto const V = static_cast<long long>(g.vertex_count());
     long long const positive =
         static_cast<long long>(unconnected_pairs) + static_cast<long long>(3 * v4_count);
     long long const negative =

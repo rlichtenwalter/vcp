@@ -70,7 +70,7 @@ jobs:
         run: cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
       - name: Run clang-tidy
-        run: clang-tidy -p build include/vcp/*.hpp tools/*.cpp test/*.cpp
+        run: clang-tidy -p build include/vcp/*.hpp include/vcp/detail/*.hpp tools/*.cpp test/*.cpp
 
   sanitize:
     # Debug build with AddressSanitizer + UndefinedBehaviorSanitizer.
