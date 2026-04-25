@@ -5,6 +5,7 @@
 #define VCP_MULTIRELATIONAL_DIRECTED_GRAPH_HPP
 
 #include <algorithm>
+#include <bit>
 #include <cmath>
 #include <cstddef>
 #include <istream>
@@ -12,6 +13,7 @@
 #include <ostream>
 #include <sstream>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vcp/multirelational_graph.hpp>
 #include <vector>
@@ -316,19 +318,26 @@ template <std::size_t r> std::size_t multirelational_directed_graph<r>::relation
   // i.e. the index of the highest-numbered relation with at least one edge.
   // This is a property of the data, not the template parameter r (which is
   // the maximum capacity). Returns 0 for an empty graph or one whose edges
-  // all have value 0 (no relations set). Bit-counting rather than
-  // std::log2 is used because connectivity_address_type may be a
-  // boost::multiprecision integer, for which std::log2 is not defined.
+  // all have value 0 (no relations set).
+  //
+  // For the std::size_t case (small r), std::bit_width compiles to a single
+  // BSR/LZCNT instruction. For the boost::multiprecision case (large r), we
+  // fall back to the explicit loop because std::bit_width is constrained to
+  // std::unsigned_integral types and cpp_int does not satisfy that concept.
   if (num_out_edges == 0) {
     return 0;
   }
   connectivity_address_type const max_val(
       *std::max_element(&edge_values[0], &edge_values[2 * num_out_edges]));
-  std::size_t bits(0);
-  for (connectivity_address_type v(max_val); v > 0; v >>= 1) {
-    ++bits;
+  if constexpr (std::is_same_v<connectivity_address_type, std::size_t>) {
+    return std::bit_width(max_val);
+  } else {
+    std::size_t bits = 0;
+    for (auto v = max_val; v > 0; v >>= 1) {
+      ++bits;
+    }
+    return bits;
   }
-  return bits;
 }
 
 template <std::size_t r>
