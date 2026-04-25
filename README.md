@@ -27,7 +27,7 @@ All tools accept `--help` and `--version`.
 
 ## Building
 
-Requires a C++14 compiler, CMake ≥ 3.21, and Boost headers (for
+Requires a C++20 compiler, CMake ≥ 3.21, and Boost headers (for
 `boost::multiprecision`, used to support multirelational VCPs whose address
 space exceeds 64 bits). On Debian/Ubuntu:
 
@@ -90,7 +90,7 @@ from your own code — just add `include/` to your include path and link against
 Boost headers. For example:
 
 ```bash
-g++ -std=c++14 -I /path/to/vcp/include myfile.cpp
+g++ -std=c++20 -I /path/to/vcp/include myfile.cpp
 ```
 
 In `myfile.cpp`:

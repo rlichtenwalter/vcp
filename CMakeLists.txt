@@ -40,7 +40,7 @@ FetchContent_MakeAvailable(CLI11)
 add_library(vcp INTERFACE)
 add_library(vcp::vcp ALIAS vcp)
 
-target_compile_features(vcp INTERFACE cxx_std_14)
+target_compile_features(vcp INTERFACE cxx_std_20)
 
 target_include_directories(vcp INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

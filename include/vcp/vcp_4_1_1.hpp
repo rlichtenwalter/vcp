@@ -76,14 +76,16 @@ private:
   // and the existing `second < 3` shorthand (tests "not BOTH") continues
   // to exclude it correctly.
   enum directedness_value : std::size_t { OUT = 1, IN = 2, BOTH = 3, EMPTY = 4 };
-  enum connectivity_value : std::size_t {
-    V1V2 = 1,
-    V1V3 = 4,
-    V1V4 = 16,
-    V2V3 = 64,
-    V2V4 = 256,
-    V3V4 = 1024
-  };
+  // C++20 deprecates arithmetic between distinct enum types; the
+  // V*V* pair-stride constants are summed with directedness_value values at
+  // use sites, so they are static constexpr (not enum) to keep one operand
+  // of every cross-axis sum a plain integer.
+  static constexpr std::size_t V1V2 = 1;
+  static constexpr std::size_t V1V3 = 4;
+  static constexpr std::size_t V1V4 = 16;
+  static constexpr std::size_t V2V3 = 64;
+  static constexpr std::size_t V2V4 = 256;
+  static constexpr std::size_t V3V4 = 1024;
   directed_graph const &g;
   constexpr static const std::size_t num_structures = 4096;
   static std::size_t element_address(std::size_t subgraph_address);
