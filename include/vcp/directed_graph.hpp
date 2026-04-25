@@ -266,17 +266,17 @@ inline const_vertex_iterator directed_graph::vertices_end() const {
   return &vertices[vertex_count()];
 }
 
-inline const_vertex_iterator directed_graph::out_edges_begin() const { return &edges[0]; }
+inline const_edge_iterator directed_graph::out_edges_begin() const { return &edges[0]; }
 
-inline const_vertex_iterator directed_graph::out_edges_end() const {
+inline const_edge_iterator directed_graph::out_edges_end() const {
   return &edges[out_edge_count()];
 }
 
-inline const_vertex_iterator directed_graph::in_edges_begin() const {
+inline const_edge_iterator directed_graph::in_edges_begin() const {
   return &edges[out_edge_count()];
 }
 
-inline const_vertex_iterator directed_graph::in_edges_end() const {
+inline const_edge_iterator directed_graph::in_edges_end() const {
   return &edges[out_edge_count() + in_edge_count()];
 }
 
