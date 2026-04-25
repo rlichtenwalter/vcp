@@ -30,7 +30,7 @@ std::size_t top_two_neighborhood_size_undirected(UndirectedGraph const &g) {
   std::size_t top1 = 0;
   std::size_t top2 = 0;
   for (const_vertex_iterator it(g.vertices_begin()); it != g.vertices_end(); ++it) {
-    std::size_t const deg = static_cast<std::size_t>(g.neighbors_end(it) - g.neighbors_begin(it));
+    auto const deg = static_cast<std::size_t>(g.neighbors_end(it) - g.neighbors_begin(it));
     if (deg >= top1) {
       top2 = top1;
       top1 = deg;
@@ -69,23 +69,31 @@ std::size_t top_two_neighborhood_size_directed(DirectedGraph const &g) {
   std::size_t top1 = 0;
   std::size_t top2 = 0;
   for (const_vertex_iterator it(g.vertices_begin()); it != g.vertices_end(); ++it) {
-    const_edge_iterator outIt = g.out_neighbors_begin(it);
-    const_edge_iterator outEnd = g.out_neighbors_end(it);
-    const_edge_iterator inIt = g.in_neighbors_begin(it);
-    const_edge_iterator inEnd = g.in_neighbors_end(it);
-    std::size_t unique = 0;
+    auto const outBegin = g.out_neighbors_begin(it);
+    auto const outEnd = g.out_neighbors_end(it);
+    auto const inBegin = g.in_neighbors_begin(it);
+    auto const inEnd = g.in_neighbors_end(it);
+    auto const out_size = static_cast<std::size_t>(outEnd - outBegin);
+    auto const in_size = static_cast<std::size_t>(inEnd - inBegin);
+    // |out ∪ in| = |out| + |in| - |out ∩ in|. Count the intersection
+    // via a single-pass merge over the two sorted target sequences.
+    std::size_t intersection = 0;
+    auto outIt = outBegin;
+    auto inIt = inBegin;
     while (outIt != outEnd && inIt != inEnd) {
-      if (g.target_of(outIt) < g.target_of(inIt)) {
+      auto const out_target = g.target_of(outIt);
+      auto const in_target = g.target_of(inIt);
+      if (out_target < in_target) {
         ++outIt;
-      } else if (g.target_of(outIt) > g.target_of(inIt)) {
+      } else if (out_target > in_target) {
         ++inIt;
       } else {
+        ++intersection;
         ++outIt;
         ++inIt;
       }
-      ++unique;
     }
-    unique += static_cast<std::size_t>(outEnd - outIt) + static_cast<std::size_t>(inEnd - inIt);
+    auto const unique = out_size + in_size - intersection;
     if (unique >= top1) {
       top2 = top1;
       top1 = unique;
