@@ -114,7 +114,7 @@ vcp<3, r, false>::generate_vector(const_vertex_iterator v1, const_vertex_iterato
         ++v1_it;
       } else if (g.target_of(v1_it) > g.target_of(v2_it)) {
         ++counts
-              .insert(std::make_pair(v1v2 + (subgraph_address_type(g.edge_value(v1_it))
+              .insert(std::make_pair(v1v2 + (subgraph_address_type(g.edge_value(v2_it))
                                              << static_cast<std::size_t>(V2V3)),
                                      0))
               .first->second;
