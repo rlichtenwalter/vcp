@@ -58,7 +58,13 @@ public:
 
 private:
   enum directedness_value : std::size_t { OUT = 1, IN = 2, BOTH = 3 };
-  enum connectivity_value : std::size_t { V1V2 = 1, V1V3 = 4, V2V3 = 16 };
+  // C++20 deprecates arithmetic between distinct enum types; the
+  // V1V2/V1V3/V2V3 pair-stride constants are summed with directedness_value
+  // values at use sites, so they are static constexpr (not enum) to keep
+  // one operand of every cross-axis sum a plain integer.
+  static constexpr std::size_t V1V2 = 1;
+  static constexpr std::size_t V1V3 = 4;
+  static constexpr std::size_t V2V3 = 16;
   directed_graph const &g;
   std::pair<const_edge_iterator, directedness_value>
   next_union_element(const_edge_iterator &it1, const_edge_iterator end1, const_edge_iterator &it2,

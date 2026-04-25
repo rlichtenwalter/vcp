@@ -75,15 +75,16 @@ public:
                                                                        const_vertex_iterator v2);
 
 private:
-  enum connectivity_value : std::size_t { // in bit shifting terms
-    V1V2 = 0 * r,
-    V1V3 = 2 * r,
-    V2V3 = 4 * r
-  };
-  enum directedness_value : std::size_t { // in bit shifting terms
-    OUT = 0 * r,
-    IN = 1 * r
-  };
+  // Bit-shift positions (not mutually-exclusive enum values): the V*V*
+  // constants index which vertex pair, the OUT/IN constants index which
+  // direction within the pair. They are summed at use sites to form a
+  // composite shift amount. Defined as static constexpr (not enum) because
+  // C++20 deprecates arithmetic between values of distinct enum types.
+  static constexpr std::size_t V1V2 = 0 * r;
+  static constexpr std::size_t V1V3 = 2 * r;
+  static constexpr std::size_t V2V3 = 4 * r;
+  static constexpr std::size_t OUT = 0 * r;
+  static constexpr std::size_t IN = 1 * r;
   graph_type const &g;
   std::pair<const_edge_iterator, std::pair<connectivity_address_type, connectivity_address_type>>
   next_union_element(const_edge_iterator &it1, const_edge_iterator end1, const_edge_iterator &it2,
