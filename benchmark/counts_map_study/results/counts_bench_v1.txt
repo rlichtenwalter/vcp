@@ -1,0 +1,220 @@
+Filters: [!benchmark]
+Randomness seeded to: 4079031928
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+bench_counts_containers is a Catch2 v3.13.0 host application.
+Run with -? for options
+
+-------------------------------------------------------------------------------
+counts large-sparse (K=100k, N=200k, uniform)
+-------------------------------------------------------------------------------
+/home/rlichten/git/vcp/benchmark/counts_map_study/bench_counts_containers.cpp:294
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+StdMap                                          15             1    598.524 ms
+                                        42.7954 ms    40.8875 ms    49.2169 ms
+                                         6.2502 ms    1.36475 ms    11.7474 ms
+
+HashSortedKeys                                  15             1    191.797 ms
+                                        12.0383 ms    11.9047 ms    12.2037 ms
+                                        291.893 us    209.421 us    401.975 us
+
+HashSortedIters                                 15             1     197.34 ms
+                                        13.6659 ms    13.4196 ms    13.9286 ms
+                                        503.734 us    394.743 us    656.665 us
+
+HashSortedPairs                                 15             1    185.872 ms
+                                        12.4303 ms    12.2365 ms    12.6735 ms
+                                        428.982 us    335.706 us    586.558 us
+
+SortedVector                                    15             1     7.75978 s
+                                        536.272 ms    529.036 ms    544.384 ms
+                                        15.1723 ms    12.1888 ms    20.3564 ms
+
+BatchedDedup                                    15             1    161.029 ms
+                                         10.686 ms    10.6503 ms     10.724 ms
+                                        72.9395 us    57.7422 us    93.8227 us
+
+
+-------------------------------------------------------------------------------
+counts tiny-hot (K=16, N=100k, uniform)
+-------------------------------------------------------------------------------
+/home/rlichten/git/vcp/benchmark/counts_map_study/bench_counts_containers.cpp:279
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+StdMap                                          15             1    21.4259 ms
+                                        1.41862 ms    1.41412 ms    1.42294 ms
+                                        8.74509 us    6.53711 us    12.1471 us
+
+HashSortedKeys                                  15             2    6.63441 ms
+                                        218.015 us     216.21 us    220.231 us
+                                        3.93175 us    2.75397 us    5.87129 us
+
+HashSortedIters                                 15             2    6.60816 ms
+                                        220.587 us     218.48 us    223.547 us
+                                        4.88408 us     3.3322 us    6.47465 us
+
+HashSortedPairs                                 15             2    6.58323 ms
+                                        219.452 us     216.98 us    221.456 us
+                                        4.39857 us    2.97928 us     6.2381 us
+
+SortedVector                                    15             1     21.662 ms
+                                        1.45909 ms    1.44926 ms    1.47432 ms
+                                         23.745 us    14.2408 us    34.0116 us
+
+BatchedDedup                                    15             1    28.7975 ms
+                                        1.91743 ms    1.90265 ms    1.96748 ms
+                                        48.7228 us    10.2947 us    91.2687 us
+
+
+-------------------------------------------------------------------------------
+counts medium-uniform (K=4096, N=500k, uniform)
+-------------------------------------------------------------------------------
+/home/rlichten/git/vcp/benchmark/counts_map_study/bench_counts_containers.cpp:289
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+StdMap                                          15             1    441.632 ms
+                                        29.6165 ms    29.5569 ms    29.6787 ms
+                                        119.943 us    83.8903 us    183.416 us
+
+HashSortedKeys                                  15             1    25.6752 ms
+                                        1.71039 ms    1.69842 ms    1.72127 ms
+                                        22.5125 us    16.7987 us    31.3035 us
+
+HashSortedIters                                 15             1    25.4287 ms
+                                        1.70082 ms    1.69327 ms    1.71056 ms
+                                        16.9326 us    12.8264 us    22.0968 us
+
+HashSortedPairs                                 15             1    25.3516 ms
+                                        1.69222 ms    1.68134 ms    1.71478 ms
+                                        29.6913 us    15.1406 us    49.3069 us
+
+SortedVector                                    15             1    395.931 ms
+                                        26.5292 ms    26.4983 ms    26.5583 ms
+                                        59.3501 us    44.3398 us    80.7507 us
+
+BatchedDedup                                    15             1    298.256 ms
+                                        19.7661 ms    19.7064 ms    19.8345 ms
+                                        126.208 us    96.0881 us     163.01 us
+
+
+-------------------------------------------------------------------------------
+counts adversarial-desc (K=5k, N=5k, descending)
+-------------------------------------------------------------------------------
+/home/rlichten/git/vcp/benchmark/counts_map_study/bench_counts_containers.cpp:304
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+StdMap                                          15             2    6.05337 ms
+                                        204.692 us    201.918 us    206.911 us
+                                        4.88964 us    3.71051 us    7.01883 us
+
+HashSortedKeys                                  15             2    6.02538 ms
+                                        202.303 us    198.892 us    206.569 us
+                                        7.52229 us    5.30809 us    10.2405 us
+
+HashSortedIters                                 15             2     5.9196 ms
+                                        195.979 us    193.475 us    198.234 us
+                                         4.6844 us    3.43589 us    6.47091 us
+
+HashSortedPairs                                 15             2    5.90952 ms
+                                        193.799 us    191.267 us    196.237 us
+                                        4.92674 us    3.54121 us    7.09225 us
+
+SortedVector                                    15             1    46.5601 ms
+                                        3.32856 ms    3.15799 ms    3.63901 ms
+                                        442.953 us    257.403 us    666.082 us
+
+BatchedDedup                                    15             9    4.14464 ms
+                                        32.0868 us    31.2774 us    32.9273 us
+                                        1.62684 us    1.25852 us    2.15521 us
+
+
+-------------------------------------------------------------------------------
+counts small-zipf (K=256, N=1M, Zipf s=1.2)
+-------------------------------------------------------------------------------
+/home/rlichten/git/vcp/benchmark/counts_map_study/bench_counts_containers.cpp:284
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+StdMap                                          15             1    267.208 ms
+                                        17.7313 ms    17.6295 ms    17.9179 ms
+                                        264.957 us    145.149 us    407.583 us
+
+HashSortedKeys                                  15             1    34.9775 ms
+                                        2.24621 ms    2.23333 ms    2.26404 ms
+                                        29.8362 us    19.8984 us    40.5798 us
+
+HashSortedIters                                 15             1     37.135 ms
+                                        2.46128 ms    2.33714 ms    2.69656 ms
+                                        325.785 us    113.991 us    470.042 us
+
+HashSortedPairs                                 15             1    38.5578 ms
+                                        2.38602 ms      2.305 ms    2.61471 ms
+                                        248.956 us    88.3485 us    458.592 us
+
+SortedVector                                    15             1    241.984 ms
+                                        16.2004 ms    16.1512 ms    16.2808 ms
+                                        121.349 us    68.0656 us    203.841 us
+
+BatchedDedup                                    15             1    567.099 ms
+                                        38.0684 ms    37.8975 ms    38.2648 ms
+                                        361.894 us    277.874 us    507.484 us
+
+
+-------------------------------------------------------------------------------
+counts huge-oneshot (K=1M, N=1M, uniform)
+-------------------------------------------------------------------------------
+/home/rlichten/git/vcp/benchmark/counts_map_study/bench_counts_containers.cpp:299
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+StdMap                                          15             1     11.0569 s
+                                        938.194 ms    931.232 ms    946.231 ms
+                                        14.7797 ms    10.1431 ms    22.5638 ms
+
+HashSortedKeys                                  15             1     3.31827 s
+                                         211.73 ms    208.559 ms    216.127 ms
+                                         7.3307 ms    5.19255 ms    10.8902 ms
+
+HashSortedIters                                 15             1      3.4759 s
+                                        241.051 ms    237.287 ms    246.294 ms
+                                         8.6611 ms    5.70848 ms    13.7758 ms
+
+HashSortedPairs                                 15             1     3.36526 s
+                                        219.848 ms    215.919 ms    226.155 ms
+                                         9.7137 ms    5.76464 ms    14.2439 ms
+
+SortedVector                                    15             1     7.43077 m
+                                         30.4291 s     30.0794 s     30.7874 s
+                                        700.766 ms    546.518 ms    873.087 ms
+
+BatchedDedup                                    15             1    947.407 ms
+                                        61.9644 ms    61.6073 ms     62.626 ms
+                                        938.153 us    562.251 us    1.54886 ms
+
+
+===============================================================================
+test cases: 6 | 6 passed
+assertions: - none -

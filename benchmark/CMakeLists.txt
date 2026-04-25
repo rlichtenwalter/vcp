@@ -42,5 +42,7 @@ target_compile_options(bench_vcp PRIVATE
 target_compile_options(bench_vcp PRIVATE ${VCP_SANITIZE_FLAGS})
 target_link_options(bench_vcp    PRIVATE ${VCP_SANITIZE_FLAGS})
 
-# Optional one-off instrumentation study. Opt-in via VCP_BUILD_K_PROBE.
+# Optional one-off investigation harnesses. Each opts in via its own CMake
+# cache variable (see subdirectory CMakeLists.txt for the flag).
 add_subdirectory(small_map_study)
+add_subdirectory(counts_map_study)
