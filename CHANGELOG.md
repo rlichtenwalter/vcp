@@ -37,6 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Gitea Actions CI workflow: build-and-test (Release/Debug matrix), quality (pre-commit), lint (clang-tidy)
 - CLI `--version` output for each tool, sourced from VERSION via CMake
 
+- `CITATION.cff` at the repository root for academic citation metadata. Preferred citation is the open-access 2014 SpringerPlus paper; the 2012 WWW conference paper is included under references. Gitea and GitHub render a "Cite this repository" affordance from this file.
+
 ### Changed
 - Documented thread-safety contract per `vcp<n, r, d>` specialization in README and in-header comments. `vcp<3, r, d>` is safe for shared-instance concurrent calls (no mutable class state); `vcp<4, r, d>` is not safe because of the `v3Vertices` scratch buffer held as a class member. The uniform "one `vcp` per thread" pattern is always safe and recommended as the default. Previously the contract was unwritten.
 - `regression/run.sh` now encodes expected divergence between the legacy and current builds for fixture classes where legacy has a known bug that has since been fixed:
