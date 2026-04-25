@@ -27,13 +27,49 @@ namespace vcp {
 
 template <std::size_t n, std::size_t r, bool d> class vcp;
 
+/**
+ * @brief Full specialization of vcp for 3-vertex subgraphs on a single-relation undirected graph.
+ *
+ * This specialization exploits the binary (present/absent) edge structure to
+ * reduce VCP computation to a merge of sorted neighbor lists in O(degree) time
+ * per pivot pair, rather than the generic O(V) enumeration. Exactly 8 element
+ * classes exist (2^3 combinations of edges among the three vertex pairs).
+ *
+ * This specialization is safe for shared-instance concurrent calls because
+ * `generate_vector` holds no mutable class state; all working storage is
+ * stack-local.
+ */
 template <> class vcp<3, 1, false> {
 private:
   constexpr static const std::size_t num_elements = 8;
 
 public:
-  vcp(graph const &);
+  /**
+   * @brief Construct the VCP calculator bound to the given graph.
+   *
+   * @param g Undirected graph to analyze; must outlive this object.
+   */
+  vcp(graph const &g);
+
+  /**
+   * @brief Return the number of VCP element classes for this specialization.
+   *
+   * Always 8 for (n=3, r=1, d=false).
+   *
+   * @return 8.
+   */
   constexpr static std::size_t element_count();
+
+  /**
+   * @brief Compute the VCP feature vector for the pivot pair (v1, v2).
+   *
+   * Returns a fixed-size array of 8 counts, one per element class, indexed
+   * by element address. The sum of all counts equals |V| - 2.
+   *
+   * @param v1 Iterator to the first pivot vertex.
+   * @param v2 Iterator to the second pivot vertex.
+   * @return Array of 8 occurrence counts indexed by element address.
+   */
   std::array<unsigned long, num_elements> const generate_vector(const_vertex_iterator v1,
                                                                 const_vertex_iterator v2);
 

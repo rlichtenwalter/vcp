@@ -27,11 +27,41 @@ Profiles code base. If not, see <http://www.gnu.org/licenses/>.
 
 namespace vcp {
 
+/**
+ * @brief Fixed-size square matrix stored in row-major order on the stack.
+ *
+ * Wraps a `std::array` of `n * n` elements value-initialized to zero.
+ * The compile-time dimension `n` must be non-zero; use the `n = 0`
+ * partial specialization for runtime-sized matrices. VCP algorithms use
+ * this type to represent the connectivity between the `n` pivot vertices
+ * of a candidate subgraph.
+ *
+ * @tparam value_type Element type stored in each cell.
+ * @tparam n          Side length of the matrix; `n * n` elements are stored.
+ */
 template <typename value_type, std::size_t n = 0> class square_matrix {
 public:
+  /** @brief Return the side length of the matrix. */
   std::size_t size() const;
+
+  /**
+   * @brief Return a mutable reference to the element at (row, column).
+   *
+   * @param row    Zero-based row index in [0, size()).
+   * @param column Zero-based column index in [0, size()).
+   * @return Mutable reference to the element.
+   */
   value_type &operator()(std::size_t row, std::size_t column);
+
+  /**
+   * @brief Return a const reference to the element at (row, column).
+   *
+   * @param row    Zero-based row index in [0, size()).
+   * @param column Zero-based column index in [0, size()).
+   * @return Const reference to the element.
+   */
   value_type const &operator()(std::size_t row, std::size_t column) const;
+
   template <typename value_type_, std::size_t n_>
   friend std::ostream &operator<<(std::ostream &os, square_matrix<value_type_, n_> const &matrix);
 
@@ -39,6 +69,18 @@ private:
   std::array<value_type, n * n> data = {{0}};
 };
 
+/**
+ * @brief Write a fixed-size square matrix to an output stream.
+ *
+ * Outputs rows separated by newlines; elements within each row are
+ * separated by commas.
+ *
+ * @tparam value_type Element type.
+ * @tparam n          Side length.
+ * @param os     Destination output stream.
+ * @param matrix Matrix to write.
+ * @return Reference to @p os.
+ */
 template <typename value_type, size_t n>
 std::ostream &operator<<(std::ostream &os, square_matrix<value_type, n> const &matrix);
 
@@ -76,16 +118,76 @@ std::ostream &operator<<(std::ostream &os, square_matrix<value_type, n> const &m
 template <typename value_type>
 std::ostream &operator<<(std::ostream &os, square_matrix<value_type, 0> const &matrix);
 
+/**
+ * @brief Dynamic square matrix whose side length is set at construction time.
+ *
+ * This partial specialization (n = 0) stores elements in a `std::vector`
+ * rather than a `std::array`, allowing the size to be chosen at runtime.
+ * The interface is intentionally identical to the fixed-size primary template
+ * so that code can switch between the two without modification. The VCP
+ * static-mapper and tool code use this variant when the graph parameters
+ * `n`, `r`, `d` are not known at compile time.
+ *
+ * @tparam value_type Element type stored in each cell.
+ */
 template <typename value_type> class square_matrix<value_type, 0> {
 public:
+  /** @brief Return the side length of the matrix. */
   std::size_t size() const;
+
+  /**
+   * @brief Resize the matrix to @p n × @p n, zero-initializing new elements.
+   *
+   * Existing element values are not preserved across a resize.
+   *
+   * @param n New side length.
+   */
   void resize(std::size_t n);
+
+  /** @brief Construct an empty (0 × 0) matrix. */
   square_matrix() = default;
+
+  /**
+   * @brief Construct an n × n matrix with all elements zero-initialized.
+   *
+   * @param n Side length of the matrix.
+   */
   square_matrix(std::size_t n);
+
+  /**
+   * @brief Construct a dynamic matrix from a fixed-size matrix by copying its elements.
+   *
+   * @tparam n Side length of the source fixed-size matrix.
+   * @param matrix Source matrix to copy.
+   */
   template <std::size_t n> square_matrix(square_matrix<value_type, n> const &matrix);
+
+  /**
+   * @brief Assign from a fixed-size matrix, resizing and copying elements.
+   *
+   * @tparam n Side length of the source fixed-size matrix.
+   * @param matrix Source matrix to copy.
+   * @return Reference to this matrix.
+   */
   template <std::size_t n>
   square_matrix<value_type, 0> &operator=(square_matrix<value_type, n> const &matrix);
+
+  /**
+   * @brief Return a mutable reference to the element at (row, column).
+   *
+   * @param row    Zero-based row index in [0, size()).
+   * @param column Zero-based column index in [0, size()).
+   * @return Mutable reference to the element.
+   */
   value_type &operator()(std::size_t row, std::size_t column);
+
+  /**
+   * @brief Return a const reference to the element at (row, column).
+   *
+   * @param row    Zero-based row index in [0, size()).
+   * @param column Zero-based column index in [0, size()).
+   * @return Const reference to the element.
+   */
   value_type const &operator()(std::size_t row, std::size_t column) const;
 
 private:
@@ -133,6 +235,17 @@ value_type const &square_matrix<value_type, 0>::operator()(std::size_t row,
   return data[size() * row + column];
 }
 
+/**
+ * @brief Write a dynamic square matrix to an output stream.
+ *
+ * Outputs rows separated by newlines; elements within each row are
+ * separated by commas.
+ *
+ * @tparam value_type Element type.
+ * @param os     Destination output stream.
+ * @param matrix Matrix to write.
+ * @return Reference to @p os.
+ */
 template <typename value_type>
 std::ostream &operator<<(std::ostream &os, square_matrix<value_type, 0> const &matrix) {
   for (std::size_t row(0); row < matrix.size(); ++row) {

@@ -27,13 +27,47 @@ namespace vcp {
 
 template <std::size_t n, std::size_t r, bool d> class vcp;
 
+/**
+ * @brief Full specialization of vcp for 3-vertex subgraphs on a single-relation directed graph.
+ *
+ * Each directed edge can be absent, outgoing, incoming, or mutual (3 states × 3 pairs
+ * = 64 element classes). The algorithm merges out- and in-neighbor lists into a sorted
+ * union in O(degree) time per pivot pair.
+ *
+ * This specialization is safe for shared-instance concurrent calls because
+ * `generate_vector` holds no mutable class state.
+ */
 template <> class vcp<3, 1, true> {
 private:
   const static unsigned long num_elements = 64;
 
 public:
+  /**
+   * @brief Construct the VCP calculator bound to the given graph.
+   *
+   * @param g Directed graph to analyze; must outlive this object.
+   */
   vcp(directed_graph const &g);
+
+  /**
+   * @brief Return the number of VCP element classes for this specialization.
+   *
+   * Always 64 for (n=3, r=1, d=true).
+   *
+   * @return 64.
+   */
   constexpr static std::size_t element_count();
+
+  /**
+   * @brief Compute the VCP feature vector for the pivot pair (v1, v2).
+   *
+   * Returns a fixed-size array of 64 counts, one per element class. The sum
+   * of all counts equals |V| - 2.
+   *
+   * @param v1 Iterator to the first pivot vertex.
+   * @param v2 Iterator to the second pivot vertex.
+   * @return Array of 64 occurrence counts indexed by element address.
+   */
   std::array<unsigned long, num_elements> const generate_vector(const_vertex_iterator v1,
                                                                 const_vertex_iterator v2);
 

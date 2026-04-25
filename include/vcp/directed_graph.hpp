@@ -37,33 +37,177 @@ using edge_id_t = std::size_t;
 using const_vertex_iterator = void *const *;
 using const_edge_iterator = void *const *;
 
+/**
+ * @brief Directed graph with both out-edge and in-edge CSR adjacency lists.
+ *
+ * Stores out-edges and in-edges in a single flat `edges` array. The
+ * out-edge block occupies indices [0, out_edge_count()) and the in-edge
+ * block occupies [out_edge_count(), out_edge_count() + in_edge_count()).
+ * Each vertex has two entries in the `vertices` array: `vertices[id]`
+ * points into the out-edge block and `vertices[vertex_count() + id]` points
+ * into the in-edge block, enabling O(1) access to both neighbor lists.
+ *
+ * The out-edge data is read directly from the stream; in-edges are derived
+ * by inverting the out-edge list during `operator>>`. Neighbor lists are
+ * expected to be sorted by target vertex id; the `vcp<3, 1, true>` and
+ * `vcp<4, 1, true>` specializations rely on this ordering for their
+ * merge-based enumeration.
+ *
+ * Note: `out_edge_count()` and `in_edge_count()` both return the same value
+ * (the number of directed out-edges), since every out-edge implies exactly
+ * one in-edge.
+ */
 class directed_graph {
 public:
+  /** @brief Construct an empty directed graph with no vertices or edges. */
   directed_graph();
+
+  /** @brief Copy-construct a directed graph, deep-copying both CSR arrays. */
   directed_graph(directed_graph const &);
+
   ~directed_graph();
+
+  /** @brief Copy-assign a directed graph, deep-copying both CSR arrays. */
   directed_graph &operator=(directed_graph const &);
+
+  /** @brief Return the number of vertices. */
   std::size_t vertex_count() const;
+
+  /** @brief Return the number of directed out-edges. */
   std::size_t out_edge_count() const;
+
+  /**
+   * @brief Return the number of directed in-edges.
+   *
+   * Because each out-edge implies exactly one in-edge, this always equals
+   * out_edge_count().
+   */
   std::size_t in_edge_count() const;
+
+  /** @brief Return an iterator to the first vertex. */
   const_vertex_iterator vertices_begin() const;
+
+  /** @brief Return a past-the-end iterator for vertices. */
   const_vertex_iterator vertices_end() const;
+
+  /** @brief Return an iterator to the first slot in the out-edge block. */
   const_edge_iterator out_edges_begin() const;
+
+  /** @brief Return a past-the-end iterator for the out-edge block. */
   const_edge_iterator out_edges_end() const;
+
+  /** @brief Return an iterator to the first slot in the in-edge block. */
   const_edge_iterator in_edges_begin() const;
+
+  /** @brief Return a past-the-end iterator for the in-edge block. */
   const_edge_iterator in_edges_end() const;
-  const_edge_iterator out_neighbors_begin(const_vertex_iterator) const;
-  const_edge_iterator out_neighbors_end(const_vertex_iterator) const;
-  const_edge_iterator in_neighbors_begin(const_vertex_iterator) const;
-  const_edge_iterator in_neighbors_end(const_vertex_iterator) const;
-  vertex_id_t vertex_id(const_vertex_iterator) const;
-  const_vertex_iterator target_of(const_edge_iterator) const;
-  edge_id_t edge_id(const_edge_iterator) const;
-  bool edge_exists(const_edge_iterator) const;
-  const_edge_iterator out_edge(const_vertex_iterator, const_vertex_iterator) const;
-  const_edge_iterator in_edge(const_vertex_iterator, const_vertex_iterator) const;
-  bool out_edge_exists(const_vertex_iterator, const_vertex_iterator) const;
-  bool in_edge_exists(const_vertex_iterator, const_vertex_iterator) const;
+
+  /**
+   * @brief Return an iterator to the first out-neighbor of the given vertex.
+   *
+   * @param it Iterator to a vertex in this graph.
+   * @return Iterator to the first out-neighbor edge slot.
+   */
+  const_edge_iterator out_neighbors_begin(const_vertex_iterator it) const;
+
+  /**
+   * @brief Return a past-the-end iterator for out-neighbors of the given vertex.
+   *
+   * @param it Iterator to a vertex in this graph.
+   * @return Past-the-end iterator for the out-neighbor range.
+   */
+  const_edge_iterator out_neighbors_end(const_vertex_iterator it) const;
+
+  /**
+   * @brief Return an iterator to the first in-neighbor of the given vertex.
+   *
+   * @param it Iterator to a vertex in this graph.
+   * @return Iterator to the first in-neighbor edge slot.
+   */
+  const_edge_iterator in_neighbors_begin(const_vertex_iterator it) const;
+
+  /**
+   * @brief Return a past-the-end iterator for in-neighbors of the given vertex.
+   *
+   * @param it Iterator to a vertex in this graph.
+   * @return Past-the-end iterator for the in-neighbor range.
+   */
+  const_edge_iterator in_neighbors_end(const_vertex_iterator it) const;
+
+  /**
+   * @brief Return the integer id of the given vertex.
+   *
+   * @param it Vertex iterator obtained from this graph.
+   * @return Zero-based vertex identifier.
+   */
+  vertex_id_t vertex_id(const_vertex_iterator it) const;
+
+  /**
+   * @brief Return the vertex pointed to by an edge iterator.
+   *
+   * @param it Edge iterator within an out- or in-neighbor range.
+   * @return Iterator to the target vertex of the edge.
+   */
+  const_vertex_iterator target_of(const_edge_iterator it) const;
+
+  /**
+   * @brief Return the integer id of the given edge slot.
+   *
+   * @param it Edge iterator obtained from this graph.
+   * @return Zero-based offset of @p it within the combined edge array.
+   */
+  edge_id_t edge_id(const_edge_iterator it) const;
+
+  /**
+   * @brief Return true if @p it refers to an existing edge (i.e., is not in_edges_end()).
+   *
+   * @param it Edge iterator to test.
+   * @return True if @p it != in_edges_end().
+   */
+  bool edge_exists(const_edge_iterator it) const;
+
+  /**
+   * @brief Find the directed out-edge from @p source to @p target.
+   *
+   * Performs a linear search through @p source's out-neighbor list.
+   * Returns in_edges_end() if no such edge exists.
+   *
+   * @param source Iterator to the source vertex.
+   * @param target Iterator to the target vertex.
+   * @return Iterator to the out-edge, or in_edges_end() if absent.
+   */
+  const_edge_iterator out_edge(const_vertex_iterator source, const_vertex_iterator target) const;
+
+  /**
+   * @brief Find the directed in-edge from @p source to @p target.
+   *
+   * Performs a linear search through @p source's in-neighbor list.
+   * Returns in_edges_end() if no such edge exists.
+   *
+   * @param source Iterator to the source vertex.
+   * @param target Iterator to the target vertex.
+   * @return Iterator to the in-edge, or in_edges_end() if absent.
+   */
+  const_edge_iterator in_edge(const_vertex_iterator source, const_vertex_iterator target) const;
+
+  /**
+   * @brief Return true if a directed out-edge exists from @p source to @p target.
+   *
+   * @param source Iterator to the source vertex.
+   * @param target Iterator to the target vertex.
+   * @return True if the out-edge is present.
+   */
+  bool out_edge_exists(const_vertex_iterator source, const_vertex_iterator target) const;
+
+  /**
+   * @brief Return true if a directed in-edge exists from @p source to @p target.
+   *
+   * @param source Iterator to the source vertex.
+   * @param target Iterator to the target vertex.
+   * @return True if the in-edge is present.
+   */
+  bool in_edge_exists(const_vertex_iterator source, const_vertex_iterator target) const;
+
   friend std::ostream &operator<<(std::ostream &, directed_graph const &);
   friend std::istream &operator>>(std::istream &, directed_graph &);
 
@@ -207,6 +351,17 @@ inline bool directed_graph::in_edge_exists(const_vertex_iterator source,
          std::find(in_neighbors_begin(source), in_neighbors_end(source), target);
 }
 
+/**
+ * @brief Write a directed graph to an output stream.
+ *
+ * Emits one line per vertex containing space-separated out-neighbor ids.
+ * An isolated vertex produces an empty line. The format is the same as
+ * that accepted by `operator>>`.
+ *
+ * @param os Output stream.
+ * @param g  Directed graph to write.
+ * @return Reference to @p os.
+ */
 inline std::ostream &operator<<(std::ostream &os, directed_graph const &g) {
   for (const_vertex_iterator vIt = g.vertices_begin(); vIt != g.vertices_end(); ++vIt) {
     const_edge_iterator const nBegin = g.out_neighbors_begin(vIt);
@@ -222,6 +377,18 @@ inline std::ostream &operator<<(std::ostream &os, directed_graph const &g) {
   return os;
 }
 
+/**
+ * @brief Read a directed graph from an input stream.
+ *
+ * Expects one line per vertex with space-separated out-neighbor ids (0-based).
+ * In-edges are derived automatically by inverting the out-edge list. An empty
+ * line represents a vertex with no out-edges.
+ *
+ * @param is Input stream positioned at the first vertex line.
+ * @param g  Directed graph object to populate; any previous contents are replaced.
+ * @return Reference to @p is.
+ * @throws std::invalid_argument If a token cannot be parsed as a vertex id.
+ */
 inline std::istream &operator>>(std::istream &is, directed_graph &g) {
   std::vector<edge_id_t> out_v_temp;
   std::vector<vertex_id_t> out_e_temp;

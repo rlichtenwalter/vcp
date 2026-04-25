@@ -30,13 +30,52 @@ namespace vcp {
 
 template <std::size_t n, std::size_t r, bool d> class vcp;
 
+/**
+ * @brief Full specialization of vcp for 4-vertex subgraphs on a single-relation undirected graph.
+ *
+ * Reduces the 4-vertex enumeration to a two-phase algorithm: first collect
+ * the v3 candidate set by merging the sorted neighbor lists of v1 and v2,
+ * then iterate v3 candidates to discover v4 vertices. Exactly 40 element
+ * classes exist for this configuration.
+ *
+ * This specialization is NOT safe for shared-instance concurrent calls
+ * because `generate_vector` uses the `v3Vertices` scratch buffer held as a
+ * class member. Construct one `vcp<4, 1, false>` per thread.
+ */
 template <> class vcp<4, 1, false> {
 private:
   constexpr static const std::size_t num_elements = 40;
 
 public:
+  /**
+   * @brief Construct the VCP calculator bound to the given graph.
+   *
+   * Precomputes the global count of unconnected vertex pairs, which is
+   * used to fill the least-connected element slot in `generate_vector`.
+   *
+   * @param g Undirected graph to analyze; must outlive this object.
+   */
   vcp(graph const &g);
+
+  /**
+   * @brief Return the number of VCP element classes for this specialization.
+   *
+   * Always 40 for (n=4, r=1, d=false).
+   *
+   * @return 40.
+   */
   constexpr static std::size_t element_count();
+
+  /**
+   * @brief Compute the VCP feature vector for the pivot pair (v1, v2).
+   *
+   * Returns a fixed-size array of 40 counts. The sum of all counts equals
+   * C(|V|-2, 2) (the number of unordered pairs from the non-pivot vertices).
+   *
+   * @param v1 Iterator to the first pivot vertex.
+   * @param v2 Iterator to the second pivot vertex.
+   * @return Array of 40 occurrence counts indexed by element address.
+   */
   std::array<unsigned long, num_elements> const generate_vector(const_vertex_iterator v1,
                                                                 const_vertex_iterator v2);
 

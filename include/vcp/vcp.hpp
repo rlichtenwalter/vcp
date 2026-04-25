@@ -41,17 +41,79 @@ Profiles code base. If not, see <http://www.gnu.org/licenses/>.
 
 namespace vcp {
 
+/**
+ * @brief Generic Vertex Collocation Profile (VCP) calculator.
+ *
+ * Computes the VCP feature vector for a pivot vertex pair (v1, v2) in a
+ * graph. The VCP counts how many n-vertex subgraphs containing v1 and v2
+ * exhibit each possible isomorphism class of internal connectivity, as
+ * defined in Lichtenwalter & Chawla (2012, 2014).
+ *
+ * This primary template handles arbitrary (n, r, d) combinations using
+ * `vcp_dynamic_mapper` for canonicalization. For (n=3, r=1), (n=4, r=1),
+ * and (n=3, r>1), (n=4, r>1), specialized implementations provide
+ * faster execution and are selected automatically by the compiler.
+ *
+ * Thread safety: this template is NOT safe for shared-instance concurrent
+ * calls because `generate_vector` uses mutable intermediate state. Construct
+ * one `vcp` instance per thread. The underlying graph may be shared for read.
+ *
+ * @tparam n Number of vertices in each enumerated subgraph (pivot pair + n-2 others).
+ * @tparam r Number of edge relations.
+ * @tparam d True for directed graphs; false for undirected.
+ */
 template <std::size_t n, std::size_t r, bool d> class vcp {
 public:
+  /**
+   * @brief Graph type selected automatically based on the (r, d) parameters.
+   *
+   * Resolves to `directed_graph` (r=1, d=true), `graph` (r=1, d=false),
+   * `multirelational_directed_graph<r>` (r>1, d=true), or
+   * `multirelational_graph<r>` (r>1, d=false).
+   */
   using graph_type = typename std::conditional<
       d,
       typename std::conditional<(r > 1), multirelational_directed_graph<r>, directed_graph>::type,
       typename std::conditional<(r > 1), multirelational_graph<r>, graph>::type>::type;
+
+  /**
+   * @brief Unsigned integer type that holds an r-bit edge connectivity bitmask.
+   *
+   * Alias of `multirelational_graph<r>::connectivity_address_type`.
+   */
   using connectivity_address_type = typename multirelational_graph<r>::connectivity_address_type;
+
+  /**
+   * @brief Unsigned integer type that encodes a complete n-vertex subgraph.
+   *
+   * Alias of `vcp_dynamic_mapper<n, r, d>::subgraph_address_type`.
+   */
   using subgraph_address_type = typename vcp_dynamic_mapper<n, r, d>::subgraph_address_type;
+
+  /**
+   * @brief Construct the VCP calculator bound to the given graph.
+   *
+   * The graph must outlive this object. The constructor does not copy the
+   * graph; it stores a const reference.
+   *
+   * @param g Graph to analyze.
+   */
   vcp(graph_type const &g);
-  std::map<subgraph_address_type, unsigned long> const generate_vector(const_vertex_iterator,
-                                                                       const_vertex_iterator);
+
+  /**
+   * @brief Compute the VCP feature vector for the pivot pair (v1, v2).
+   *
+   * Enumerates all n-vertex subgraphs that include v1 and v2, classifies each
+   * by its canonical element address, and returns a sparse map from element
+   * address to count. Entries with count 0 are omitted. The sum of all counts
+   * equals C(|V|-2, n-2), where |V| is the graph's vertex count.
+   *
+   * @param v1 Iterator to the first pivot vertex.
+   * @param v2 Iterator to the second pivot vertex.
+   * @return Sparse map from canonical subgraph address to occurrence count.
+   */
+  std::map<subgraph_address_type, unsigned long> const generate_vector(const_vertex_iterator v1,
+                                                                       const_vertex_iterator v2);
 
 private:
   graph_type const &g;
