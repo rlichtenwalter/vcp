@@ -184,16 +184,15 @@ private:
 };
 
 inline graph::graph()
-    : vertices(std::unique_ptr<void *[]>(new void *[1])),
-      edges(std::unique_ptr<void *[]>(new void *[1])) {
+    : vertices(std::make_unique<void *[]>(1)), edges(std::make_unique<void *[]>(1)) {
   vertices[0] = static_cast<void *>(&edges[0]);
   edges[0] = nullptr;
 }
 
 inline graph::graph(graph const &g)
     : num_vertices(g.num_vertices), num_edges(g.num_edges),
-      vertices(std::unique_ptr<void *[]>(new void *[g.vertex_count() + 1])),
-      edges(std::unique_ptr<void *[]>(new void *[g.num_edges + 1])) {
+      vertices(std::make_unique<void *[]>(g.vertex_count() + 1)),
+      edges(std::make_unique<void *[]>(g.num_edges + 1)) {
   for (const_vertex_iterator it = g.vertices_begin(); it != g.vertices_end(); ++it) {
     vertices[g.vertex_id(it)] = static_cast<void *>(&edges[g.edge_id(g.neighbors_begin(it))]);
   }
@@ -210,8 +209,8 @@ inline graph &graph::operator=(graph const &g) {
   if (this != &g) {
     num_vertices = g.num_vertices;
     num_edges = g.num_edges;
-    vertices = std::unique_ptr<void *[]>(new void *[g.vertex_count() + 1]);
-    edges = std::unique_ptr<void *[]>(new void *[g.num_edges + 1]);
+    vertices = std::make_unique<void *[]>(g.vertex_count() + 1);
+    edges = std::make_unique<void *[]>(g.num_edges + 1);
     for (const_vertex_iterator it = g.vertices_begin(); it != g.vertices_end(); ++it) {
       vertex_id_t id = g.vertex_id(it);
       vertices[id] = static_cast<void *>(&edges[g.edge_id(g.neighbors_begin(it))]);
@@ -338,8 +337,8 @@ inline std::istream &operator>>(std::istream &is, graph &g) {
   g.num_vertices = v_temp.size();
   g.num_edges = e_temp.size();
 
-  g.vertices = std::unique_ptr<void *[]>(new void *[g.vertex_count() + 1]);
-  g.edges = std::unique_ptr<void *[]>(new void *[g.num_edges + 1]);
+  g.vertices = std::make_unique<void *[]>(g.vertex_count() + 1);
+  g.edges = std::make_unique<void *[]>(g.num_edges + 1);
 
   for (size_t i = 0; i < g.vertex_count(); ++i) {
     g.vertices[i] = static_cast<void *>(&g.edges[v_temp.at(i)]);

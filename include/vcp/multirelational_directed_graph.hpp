@@ -247,11 +247,10 @@ private:
 
 template <std::size_t r>
 multirelational_directed_graph<r>::multirelational_directed_graph()
-    : vertices(std::unique_ptr<void *[]>(new void *[1])),
-      edges(std::unique_ptr<void *[]>(new void *[1])),
+    : vertices(std::make_unique<void *[]>(1)), edges(std::make_unique<void *[]>(1)),
       edge_values(
-          std::unique_ptr<typename multirelational_directed_graph<r>::connectivity_address_type[]>(
-              new typename multirelational_directed_graph<r>::connectivity_address_type[1])) {
+          std::make_unique<typename multirelational_directed_graph<r>::connectivity_address_type[]>(
+              1)) {
   vertices[0] = static_cast<void *>(&edges[0]);
   edges[0] = nullptr;
 }
@@ -260,12 +259,11 @@ template <std::size_t r>
 multirelational_directed_graph<r>::multirelational_directed_graph(
     multirelational_directed_graph const &g)
     : num_vertices(g.num_vertices), num_out_edges(g.num_out_edges),
-      vertices(std::unique_ptr<void *[]>(new void *[2 * g.vertex_count() + 1])),
-      edges(std::unique_ptr<void *[]>(new void *[g.out_edge_count() + g.in_edge_count() + 1])),
+      vertices(std::make_unique<void *[]>(2 * g.vertex_count() + 1)),
+      edges(std::make_unique<void *[]>(g.out_edge_count() + g.in_edge_count() + 1)),
       edge_values(
-          std::unique_ptr<typename multirelational_directed_graph<r>::connectivity_address_type[]>(
-              new typename multirelational_directed_graph<
-                  r>::connectivity_address_type[2 * g.num_out_edges])) {
+          std::make_unique<typename multirelational_directed_graph<r>::connectivity_address_type[]>(
+              2 * g.num_out_edges)) {
   for (const_vertex_iterator it = g.vertices_begin(); it != g.vertices_end(); ++it) {
     vertices[g.vertex_id(it)] = static_cast<void *>(&edges[g.edge_id(g.out_neighbors_begin(it))]);
     vertices[vertex_count() + g.vertex_id(it)] =
@@ -292,13 +290,11 @@ multirelational_directed_graph<r>::operator=(multirelational_directed_graph cons
   if (this != &g) {
     num_vertices = g.num_vertices;
     num_out_edges = g.num_out_edges;
-    vertices = std::unique_ptr<void *[]>(new void *[2 * g.vertex_count() + 1]);
-    edges = std::unique_ptr<void *[]>(new void *[g.out_edge_count() + g.in_edge_count() + 1]);
+    vertices = std::make_unique<void *[]>(2 * g.vertex_count() + 1);
+    edges = std::make_unique<void *[]>(g.out_edge_count() + g.in_edge_count() + 1);
     edge_values =
-        std::unique_ptr<typename multirelational_directed_graph<r>::connectivity_address_type[]>(
-            new
-            typename multirelational_directed_graph<r>::connectivity_address_type[2 *
-                                                                                  g.num_out_edges]);
+        std::make_unique<typename multirelational_directed_graph<r>::connectivity_address_type[]>(
+            2 * g.num_out_edges);
     for (const_vertex_iterator it = g.vertices_begin(); it != g.vertices_end(); ++it) {
       vertices[g.vertex_id(it)] = static_cast<void *>(&edges[g.edge_id(g.out_neighbors_begin(it))]);
       vertices[vertex_count() + g.vertex_id(it)] =
@@ -537,13 +533,11 @@ std::istream &operator>>(std::istream &is, multirelational_directed_graph<r> &g)
   g.num_vertices = out_v_temp.size();
   g.num_out_edges = out_e_temp.size();
 
-  g.vertices = std::unique_ptr<void *[]>(new void *[2 * g.vertex_count() + 1]);
-  g.edges = std::unique_ptr<void *[]>(new void *[g.out_edge_count() + g.in_edge_count() + 1]);
+  g.vertices = std::make_unique<void *[]>(2 * g.vertex_count() + 1);
+  g.edges = std::make_unique<void *[]>(g.out_edge_count() + g.in_edge_count() + 1);
   g.edge_values =
-      std::unique_ptr<typename multirelational_directed_graph<r>::connectivity_address_type[]>(
-          new
-          typename multirelational_directed_graph<r>::connectivity_address_type[g.out_edge_count() +
-                                                                                g.in_edge_count()]);
+      std::make_unique<typename multirelational_directed_graph<r>::connectivity_address_type[]>(
+          g.out_edge_count() + g.in_edge_count());
 
   for (size_t i = 0; i < g.vertex_count(); ++i) {
     g.vertices[i] = static_cast<void *>(&g.edges[out_v_temp[i]]);

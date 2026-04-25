@@ -220,16 +220,15 @@ private:
 };
 
 inline directed_graph::directed_graph()
-    : vertices(std::unique_ptr<void *[]>(new void *[1])),
-      edges(std::unique_ptr<void *[]>(new void *[1])) {
+    : vertices(std::make_unique<void *[]>(1)), edges(std::make_unique<void *[]>(1)) {
   vertices[0] = static_cast<void *>(&edges[0]);
   edges[0] = nullptr;
 }
 
 inline directed_graph::directed_graph(directed_graph const &g)
     : num_vertices(g.num_vertices), num_out_edges(g.num_out_edges),
-      vertices(std::unique_ptr<void *[]>(new void *[2 * g.vertex_count() + 1])),
-      edges(std::unique_ptr<void *[]>(new void *[g.out_edge_count() + g.in_edge_count() + 1])) {
+      vertices(std::make_unique<void *[]>(2 * g.vertex_count() + 1)),
+      edges(std::make_unique<void *[]>(g.out_edge_count() + g.in_edge_count() + 1)) {
   for (const_vertex_iterator it = g.vertices_begin(); it != g.vertices_end(); ++it) {
     vertices[g.vertex_id(it)] = static_cast<void *>(&edges[g.edge_id(g.out_neighbors_begin(it))]);
     vertices[vertex_count() + g.vertex_id(it)] =
@@ -251,8 +250,8 @@ inline directed_graph &directed_graph::operator=(directed_graph const &g) {
   if (this != &g) {
     num_vertices = g.num_vertices;
     num_out_edges = g.num_out_edges;
-    vertices = std::unique_ptr<void *[]>(new void *[2 * g.vertex_count() + 1]);
-    edges = std::unique_ptr<void *[]>(new void *[g.out_edge_count() + g.in_edge_count() + 1]);
+    vertices = std::make_unique<void *[]>(2 * g.vertex_count() + 1);
+    edges = std::make_unique<void *[]>(g.out_edge_count() + g.in_edge_count() + 1);
     for (const_vertex_iterator it = g.vertices_begin(); it != g.vertices_end(); ++it) {
       vertices[g.vertex_id(it)] = static_cast<void *>(&edges[g.edge_id(g.out_neighbors_begin(it))]);
       vertices[vertex_count() + g.vertex_id(it)] =
@@ -420,8 +419,8 @@ inline std::istream &operator>>(std::istream &is, directed_graph &g) {
   g.num_vertices = out_v_temp.size();
   g.num_out_edges = out_e_temp.size();
 
-  g.vertices = std::unique_ptr<void *[]>(new void *[2 * g.vertex_count() + 1]);
-  g.edges = std::unique_ptr<void *[]>(new void *[g.out_edge_count() + g.in_edge_count() + 1]);
+  g.vertices = std::make_unique<void *[]>(2 * g.vertex_count() + 1);
+  g.edges = std::make_unique<void *[]>(g.out_edge_count() + g.in_edge_count() + 1);
 
   for (std::size_t i = 0; i < g.vertex_count(); ++i) {
     g.vertices[i] = static_cast<void *>(&g.edges[out_v_temp.at(i)]);
