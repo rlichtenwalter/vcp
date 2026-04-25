@@ -65,6 +65,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Replace vendored TCLAP with CLI11 for command-line argument parsing
 - Rename `COPYING` to `LICENSE` (GPL-3.0 content unchanged)
 - Rename `CHANGES` to `CHANGELOG.md` with Keep-a-Changelog formatting
+- `vcp_static_mapper::operator<<` now uses `std::ranges::copy(c, out)` instead of `std::copy(c.begin(), c.end(), out)`. Three `std::max_element(c.begin(), c.end())` calls in `test/test_vcp_4_1_0.cpp` and `test/test_vcp_4_1_1.cpp` (six total) are correspondingly migrated to `std::ranges::max_element(c)`. Two `REQUIRE` lines in `test/test_square_matrix.cpp` that compared a fixed-size matrix cell against a `static_cast<int>(size_t expr)` are rewritten to land both sides into named `int` locals before the comparison so `modernize-use-integer-sign-comparison` does not fire through the cast. The `top_two_neighborhood_size_directed` helper added in this release is also restructured to count the out/in intersection in a single-loop-variable form so `bugprone-infinite-loop` no longer false-fires through the templated graph type. Aggregate effect: clang-tidy 20.x runs clean across the headers, tools, and tests with no behavior change.
 
 ### Removed
 - `build_local_gcc.sh` — obsolete gcc-4.8 bootstrap script from 2013
