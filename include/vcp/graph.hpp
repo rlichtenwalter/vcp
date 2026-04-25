@@ -16,8 +16,8 @@ You should have received a copy of the GNU General Public License along with the
 Profiles code base. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef VCP_GRAPH_H
-#define VCP_GRAPH_H
+#ifndef VCP_GRAPH_HPP
+#define VCP_GRAPH_HPP
 
 #include <algorithm>
 #include <charconv>

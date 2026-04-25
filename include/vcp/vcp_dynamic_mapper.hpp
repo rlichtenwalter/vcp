@@ -16,8 +16,8 @@ You should have received a copy of the GNU General Public License along with the
 Profiles code base. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef VCP_VCP_DYNAMIC_MAPPER
-#define VCP_VCP_DYNAMIC_MAPPER
+#ifndef VCP_VCP_DYNAMIC_MAPPER_HPP
+#define VCP_VCP_DYNAMIC_MAPPER_HPP
 
 #include <algorithm>
 #include <array>

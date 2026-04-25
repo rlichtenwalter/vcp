@@ -16,8 +16,8 @@ You should have received a copy of the GNU General Public License along with the
 Profiles code base. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef VCP_MULTIRELATIONAL_DIRECTED_GRAPH
-#define VCP_MULTIRELATIONAL_DIRECTED_GRAPH
+#ifndef VCP_MULTIRELATIONAL_DIRECTED_GRAPH_HPP
+#define VCP_MULTIRELATIONAL_DIRECTED_GRAPH_HPP
 
 #include <algorithm>
 #include <cmath>

@@ -16,8 +16,8 @@ You should have received a copy of the GNU General Public License along with the
 Profiles code base. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef VCP_VCP_4_R_1
-#define VCP_VCP_4_R_1
+#ifndef VCP_VCP_4_R_1_HPP
+#define VCP_VCP_4_R_1_HPP
 
 #include <cassert>
 #include <cstddef>
