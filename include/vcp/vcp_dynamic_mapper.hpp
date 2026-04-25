@@ -24,7 +24,6 @@ Profiles code base. If not, see <http://www.gnu.org/licenses/>.
 #include <boost/multiprecision/cpp_int.hpp>
 #include <climits>
 #include <cstddef>
-#include <iostream>
 #include <vcp/multirelational_graph.hpp>
 #include <vcp/square_matrix.hpp>
 

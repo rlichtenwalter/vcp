@@ -22,8 +22,9 @@ Profiles code base. If not, see <http://www.gnu.org/licenses/>.
 #include <algorithm>
 #include <charconv>
 #include <cstddef>
-#include <iostream>
+#include <istream>
 #include <memory>
+#include <ostream>
 #include <sstream>
 #include <stdexcept>
 #include <string>

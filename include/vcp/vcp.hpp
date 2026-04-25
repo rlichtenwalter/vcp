@@ -20,7 +20,6 @@ Profiles code base. If not, see <http://www.gnu.org/licenses/>.
 #define VCP_VCP
 
 #include <cstddef>
-#include <iostream>
 #include <map>
 #include <type_traits>
 #include <utility>

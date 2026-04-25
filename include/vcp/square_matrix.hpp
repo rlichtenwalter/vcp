@@ -22,7 +22,7 @@ Profiles code base. If not, see <http://www.gnu.org/licenses/>.
 #include <array>
 #include <cmath>
 #include <cstddef>
-#include <iostream>
+#include <ostream>
 #include <vector>
 
 namespace vcp {

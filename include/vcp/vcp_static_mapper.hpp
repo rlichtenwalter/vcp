@@ -21,8 +21,8 @@ Profiles code base. If not, see <http://www.gnu.org/licenses/>.
 
 #include <algorithm>
 #include <cstddef>
-#include <iostream>
 #include <iterator>
+#include <ostream>
 #include <vcp/square_matrix.hpp>
 #include <vector>
 

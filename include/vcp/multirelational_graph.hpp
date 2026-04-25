@@ -23,8 +23,9 @@ Profiles code base. If not, see <http://www.gnu.org/licenses/>.
 #include <boost/multiprecision/cpp_int.hpp>
 #include <cmath>
 #include <cstddef>
-#include <iostream>
+#include <istream>
 #include <memory>
+#include <ostream>
 #include <sstream>
 #include <string>
 #include <utility>
