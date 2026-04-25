@@ -19,8 +19,8 @@ the Vertex Collocation Profiles code base. If not, see
 <http://www.gnu.org/licenses/>.
 */
 
-#ifndef VCP_DETAIL_DENSE_OR_SPARSE_MAP
-#define VCP_DETAIL_DENSE_OR_SPARSE_MAP
+#ifndef VCP_DETAIL_DENSE_OR_SPARSE_MAP_HPP
+#define VCP_DETAIL_DENSE_OR_SPARSE_MAP_HPP
 
 // `detail::dense_or_sparse_map` — a two-tier std::map-like container used
 // internally by the vcp<4, r, d> hot path in place of the previous

@@ -16,8 +16,8 @@ You should have received a copy of the GNU General Public License along with the
 Profiles code base. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef VCP_VCP_4_1_1
-#define VCP_VCP_4_1_1
+#ifndef VCP_VCP_4_1_1_HPP
+#define VCP_VCP_4_1_1_HPP
 
 #include <array>
 #include <cassert>
@@ -401,8 +401,8 @@ inline std::size_t vcp<4, 1, true>::element_address(std::size_t subgraph_address
 constexpr std::size_t vcp<4, 1, true>::element_count() { return num_elements; }
 
 inline vcp<4, 1, true>::vcp(directed_graph const &g)
-    : g(g), v3Vertices(std::unique_ptr<std::pair<const_vertex_iterator, unsigned short>[]>(
-                new std::pair<const_vertex_iterator, unsigned short>[MAX_NEIGHBORS])) {
+    : g(g), v3Vertices(std::make_unique<std::pair<const_vertex_iterator, unsigned short>[]>(
+                MAX_NEIGHBORS)) {
   // compute the total number of somehow-connected pairs in the graph
   for (const_vertex_iterator it(g.vertices_begin()); it != g.vertices_end(); ++it) {
     const_edge_iterator outIt = g.out_neighbors_begin(it);

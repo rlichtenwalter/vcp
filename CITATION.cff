@@ -1,0 +1,49 @@
+cff-version: 1.2.0
+message: >-
+  If you use this software in academic work, please cite the
+  preferred-citation below (the open-access 2014 SpringerPlus paper
+  that introduces the algorithms implemented here). The earlier 2012
+  WWW conference paper is included under references.
+title: "vcp — Vertex Collocation Profiles"
+abstract: >-
+  Header-only C++ library and companion CLI tools for computing Vertex
+  Collocation Profiles (VCPs) over graphs. Provides processor- and
+  memory-efficient compressed-sparse-row graph representations, VCP
+  algorithm template classes with hand-tuned specializations, and
+  static / dynamic subgraph-to-element mappers.
+type: software
+authors:
+  - family-names: Lichtenwalter
+    given-names: Ryan N.
+    email: rlichtenwalter@gmail.com
+repository-code: "https://git.lichtenwalter.site/rlichten/vcp"
+license: GPL-3.0-or-later
+version: 2.0.0
+preferred-citation:
+  type: article
+  title: "Vertex collocation profiles: theory, computation, and results"
+  authors:
+    - family-names: Lichtenwalter
+      given-names: Ryan N.
+    - family-names: Chawla
+      given-names: Nitesh V.
+  journal: "SpringerPlus"
+  year: 2014
+  volume: 3
+  issue: 116
+  doi: "10.1186/2193-1801-3-116"
+  url: "https://doi.org/10.1186/2193-1801-3-116"
+references:
+  - type: conference-paper
+    title: "Vertex collocation profiles: subgraph counting for link analysis and prediction"
+    authors:
+      - family-names: Lichtenwalter
+        given-names: Ryan N.
+      - family-names: Chawla
+        given-names: Nitesh V.
+    collection-title: "Proceedings of the 21st International Conference on World Wide Web (WWW '12)"
+    year: 2012
+    start: 1019
+    end: 1028
+    doi: "10.1145/2187836.2187973"
+    url: "https://doi.org/10.1145/2187836.2187973"

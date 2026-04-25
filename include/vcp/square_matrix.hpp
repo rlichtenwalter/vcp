@@ -16,13 +16,13 @@ You should have received a copy of the GNU General Public License along with the
 Profiles code base. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef VCP_SQUARE_MATRIX_H
-#define VCP_SQUARE_MATRIX_H
+#ifndef VCP_SQUARE_MATRIX_HPP
+#define VCP_SQUARE_MATRIX_HPP
 
 #include <array>
 #include <cmath>
 #include <cstddef>
-#include <iostream>
+#include <ostream>
 #include <vector>
 
 namespace vcp {

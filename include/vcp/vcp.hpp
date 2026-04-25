@@ -16,11 +16,10 @@ You should have received a copy of the GNU General Public License along with the
 Profiles code base. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef VCP_VCP
-#define VCP_VCP
+#ifndef VCP_VCP_HPP
+#define VCP_VCP_HPP
 
 #include <cstddef>
-#include <iostream>
 #include <map>
 #include <type_traits>
 #include <utility>

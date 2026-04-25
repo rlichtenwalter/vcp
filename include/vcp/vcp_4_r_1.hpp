@@ -16,8 +16,8 @@ You should have received a copy of the GNU General Public License along with the
 Profiles code base. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef VCP_VCP_4_R_1
-#define VCP_VCP_4_R_1
+#ifndef VCP_VCP_4_R_1_HPP
+#define VCP_VCP_4_R_1_HPP
 
 #include <cassert>
 #include <cstddef>
@@ -119,8 +119,8 @@ private:
 template <std::size_t r>
 vcp<4, r, true>::vcp(multirelational_directed_graph<r> const &g)
     : g(g), mapper(),
-      v3Vertices(std::unique_ptr<std::pair<const_vertex_iterator, connectivity_matrix>[]>(
-          new std::pair<const_vertex_iterator, connectivity_matrix>[MAX_NEIGHBORS])) {
+      v3Vertices(std::make_unique<std::pair<const_vertex_iterator, connectivity_matrix>[]>(
+          MAX_NEIGHBORS)) {
   // (0, 0) is the unconnected class — seed its count with the number
   // of unordered pairs and decrement per real edge, same pattern as
   // vcp_4_r_0's undirected ctor.

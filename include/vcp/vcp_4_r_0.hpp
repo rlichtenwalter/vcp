@@ -16,8 +16,8 @@ You should have received a copy of the GNU General Public License along with the
 Profiles code base. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef VCP_VCP_4_R_0
-#define VCP_VCP_4_R_0
+#ifndef VCP_VCP_4_R_0_HPP
+#define VCP_VCP_4_R_0_HPP
 
 #include <cassert>
 #include <cstddef>
@@ -126,8 +126,8 @@ private:
 template <std::size_t r>
 vcp<4, r, false>::vcp(multirelational_graph<r> const &g)
     : g(g), mapper(),
-      v3Vertices(std::unique_ptr<std::pair<const_vertex_iterator, connectivity_matrix>[]>(
-          new std::pair<const_vertex_iterator, connectivity_matrix>[MAX_NEIGHBORS])) {
+      v3Vertices(std::make_unique<std::pair<const_vertex_iterator, connectivity_matrix>[]>(
+          MAX_NEIGHBORS)) {
   // Edge-type key 0 is the "no relation" class — initialize its count
   // to the number of unordered pairs, then decrement as real edges
   // are added below. Each real edge shifts one pair out of the

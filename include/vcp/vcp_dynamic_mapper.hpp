@@ -16,15 +16,14 @@ You should have received a copy of the GNU General Public License along with the
 Profiles code base. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef VCP_VCP_DYNAMIC_MAPPER
-#define VCP_VCP_DYNAMIC_MAPPER
+#ifndef VCP_VCP_DYNAMIC_MAPPER_HPP
+#define VCP_VCP_DYNAMIC_MAPPER_HPP
 
 #include <algorithm>
 #include <array>
 #include <boost/multiprecision/cpp_int.hpp>
 #include <climits>
 #include <cstddef>
-#include <iostream>
 #include <vcp/multirelational_graph.hpp>
 #include <vcp/square_matrix.hpp>
 

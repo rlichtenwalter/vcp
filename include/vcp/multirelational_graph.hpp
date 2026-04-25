@@ -16,15 +16,16 @@ You should have received a copy of the GNU General Public License along with the
 Profiles code base. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef VCP_MULTIRELATIONAL_GRAPH
-#define VCP_MULTIRELATIONAL_GRAPH
+#ifndef VCP_MULTIRELATIONAL_GRAPH_HPP
+#define VCP_MULTIRELATIONAL_GRAPH_HPP
 
 #include <algorithm>
 #include <boost/multiprecision/cpp_int.hpp>
 #include <cmath>
 #include <cstddef>
-#include <iostream>
+#include <istream>
 #include <memory>
+#include <ostream>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -204,10 +205,9 @@ private:
 
 template <std::size_t r>
 multirelational_graph<r>::multirelational_graph()
-    : vertices(std::unique_ptr<void *[]>(new void *[1])),
-      edges(std::unique_ptr<void *[]>(new void *[1])),
-      edge_values(std::unique_ptr<typename multirelational_graph<r>::connectivity_address_type[]>(
-          new typename multirelational_graph<r>::connectivity_address_type[1])) {
+    : vertices(std::make_unique<void *[]>(1)), edges(std::make_unique<void *[]>(1)),
+      edge_values(
+          std::make_unique<typename multirelational_graph<r>::connectivity_address_type[]>(1)) {
   vertices[0] = static_cast<void *>(&edges[0]);
   edges[0] = nullptr;
 }
@@ -215,10 +215,10 @@ multirelational_graph<r>::multirelational_graph()
 template <std::size_t r>
 multirelational_graph<r>::multirelational_graph(multirelational_graph const &g)
     : num_vertices(g.num_vertices), num_edges(g.num_edges),
-      vertices(std::unique_ptr<void *[]>(new void *[g.vertex_count() + 1])),
-      edges(std::unique_ptr<void *[]>(new void *[g.num_edges + 1])),
-      edge_values(std::unique_ptr<typename multirelational_graph<r>::connectivity_address_type[]>(
-          new multirelational_graph<r>::connectivity_address_type[g.num_edges])) {
+      vertices(std::make_unique<void *[]>(g.vertex_count() + 1)),
+      edges(std::make_unique<void *[]>(g.num_edges + 1)),
+      edge_values(std::make_unique<typename multirelational_graph<r>::connectivity_address_type[]>(
+          g.num_edges)) {
   for (const_vertex_iterator it = g.vertices_begin(); it != g.vertices_end(); ++it) {
     vertices[g.vertex_id(it)] = static_cast<void *>(&edges[g.edge_id(g.neighbors_begin(it))]);
   }
@@ -237,10 +237,10 @@ multirelational_graph<r> &multirelational_graph<r>::operator=(multirelational_gr
   if (this != &g) {
     num_vertices = g.num_vertices;
     num_edges = g.num_edges;
-    vertices = std::unique_ptr<void *[]>(new void *[g.vertex_count() + 1]);
-    edges = std::unique_ptr<void *[]>(new void *[g.num_edges + 1]);
-    edge_values = std::unique_ptr<typename multirelational_graph<r>::connectivity_address_type[]>(
-        new multirelational_graph<r>::connectivity_address_type[g.num_edges]);
+    vertices = std::make_unique<void *[]>(g.vertex_count() + 1);
+    edges = std::make_unique<void *[]>(g.num_edges + 1);
+    edge_values = std::make_unique<typename multirelational_graph<r>::connectivity_address_type[]>(
+        g.num_edges);
     for (const_vertex_iterator it = g.vertices_begin(); it != g.vertices_end(); ++it) {
       vertex_id_t id = g.vertex_id(it);
       vertices[id] = static_cast<void *>(&edges[g.edge_id(g.neighbors_begin(it))]);
@@ -420,10 +420,10 @@ template <std::size_t r> std::istream &operator>>(std::istream &is, multirelatio
   g.num_vertices = v_temp.size();
   g.num_edges = e_temp.size();
 
-  g.vertices = std::unique_ptr<void *[]>(new void *[g.vertex_count() + 1]);
-  g.edges = std::unique_ptr<void *[]>(new void *[g.num_edges + 1]);
-  g.edge_values = std::unique_ptr<typename multirelational_graph<r>::connectivity_address_type[]>(
-      new typename multirelational_graph<r>::connectivity_address_type[g.num_edges]);
+  g.vertices = std::make_unique<void *[]>(g.vertex_count() + 1);
+  g.edges = std::make_unique<void *[]>(g.num_edges + 1);
+  g.edge_values =
+      std::make_unique<typename multirelational_graph<r>::connectivity_address_type[]>(g.num_edges);
 
   for (size_t i(0); i < g.vertex_count(); ++i) {
     g.vertices[i] = static_cast<void *>(&g.edges[v_temp[i]]);

@@ -16,13 +16,13 @@ You should have received a copy of the GNU General Public License along with the
 Profiles code base. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef VCP_VCP_STATIC_MAPPER
-#define VCP_VCP_STATIC_MAPPER
+#ifndef VCP_VCP_STATIC_MAPPER_HPP
+#define VCP_VCP_STATIC_MAPPER_HPP
 
 #include <algorithm>
 #include <cstddef>
-#include <iostream>
 #include <iterator>
+#include <ostream>
 #include <vcp/square_matrix.hpp>
 #include <vector>
 
