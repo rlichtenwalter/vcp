@@ -55,10 +55,9 @@ public:
    * `multirelational_directed_graph<r>` (r>1, d=true), or
    * `multirelational_graph<r>` (r>1, d=false).
    */
-  using graph_type = typename std::conditional<
-      d,
-      typename std::conditional<(r > 1), multirelational_directed_graph<r>, directed_graph>::type,
-      typename std::conditional<(r > 1), multirelational_graph<r>, graph>::type>::type;
+  using graph_type = std::conditional_t<
+      d, std::conditional_t<(r > 1), multirelational_directed_graph<r>, directed_graph>,
+      std::conditional_t<(r > 1), multirelational_graph<r>, graph>>;
 
   /**
    * @brief Unsigned integer type that holds an r-bit edge connectivity bitmask.
