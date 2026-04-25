@@ -7,7 +7,9 @@
 #include <algorithm>
 #include <cstddef>
 #include <iterator>
+#include <limits>
 #include <ostream>
+#include <stdexcept>
 #include <vcp/square_matrix.hpp>
 #include <vector>
 
@@ -131,19 +133,23 @@ private:
 };
 
 inline std::size_t vcp_static_mapper::subgraph_count(std::size_t n, std::size_t r, bool d) {
-  return static_cast<std::size_t>(std::pow(2, n * (n - 1) * r * (d + 1) / 2));
+  std::size_t const bits = n * (n - 1) * r * (d + 1) / 2;
+  if (bits >= std::numeric_limits<std::size_t>::digits) {
+    throw std::length_error("vcp_static_mapper: parameter combination overflows std::size_t");
+  }
+  return std::size_t(1) << bits;
 }
 
 inline vcp_static_mapper::vcp_static_mapper(std::size_t n, std::size_t r, bool d)
     : n_(n), r_(r), d_(d), map(vcp_static_mapper::subgraph_count(n, r, d)), value_matrix(n_) {
-  auto r_pset = static_cast<std::size_t>(std::pow(2, r_));
+  std::size_t const r_pset = std::size_t(1) << r_;
   std::size_t index(0);
   for (std::size_t row(0); row < n_; ++row) {
     value_matrix(row, row) = 0;
     for (std::size_t column(row + 1); column < n_; ++column) {
-      value_matrix(row, column) = static_cast<std::size_t>(std::pow(r_pset, index++));
+      value_matrix(row, column) = std::size_t(1) << (r_ * index++);
       value_matrix(column, row) =
-          d_ ? static_cast<std::size_t>(std::pow(r_pset, index++)) : value_matrix(row, column);
+          d_ ? (std::size_t(1) << (r_ * index++)) : value_matrix(row, column);
     }
   }
 
@@ -249,7 +255,7 @@ std::size_t inline vcp_static_mapper::element_address(
 }
 
 inline square_matrix<std::size_t> vcp_static_mapper::element_structure(std::size_t address) const {
-  auto r_pset = static_cast<std::size_t>(std::pow(2, r_));
+  std::size_t const r_pset = std::size_t(1) << r_;
   square_matrix<std::size_t> matrix(n_);
   std::size_t i = 0;
   std::size_t j = 1;
