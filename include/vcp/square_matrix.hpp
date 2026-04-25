@@ -191,14 +191,14 @@ template <typename value_type>
 square_matrix<value_type, 0>::square_matrix(std::size_t n) : data(n * n, 0) {}
 
 template <typename value_type>
-template <typename std::size_t n>
+template <std::size_t n>
 square_matrix<value_type, 0>::square_matrix(square_matrix<value_type, n> const &matrix)
     : data(n * n) {
   std::copy(&matrix(0, 0), &matrix(0, 0) + n * n, &data[0]);
 }
 
 template <typename value_type>
-template <typename std::size_t n>
+template <std::size_t n>
 square_matrix<value_type, 0> &
 square_matrix<value_type, 0>::operator=(square_matrix<value_type, n> const &matrix) {
   if (static_cast<void const *>(this) != static_cast<void const *>(&matrix)) {
