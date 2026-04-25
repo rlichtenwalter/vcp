@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.21)
+cmake_minimum_required(VERSION 3.24)
 
 # Use Boost's own CMake config (BoostConfig.cmake) instead of the removed
 # FindBoost module. Requires Boost >= 1.70 (Ubuntu 20.04+, Rocky 9+).

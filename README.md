@@ -27,7 +27,7 @@ All tools accept `--help` and `--version`.
 
 ## Building
 
-Requires a C++20 compiler, CMake ≥ 3.21, and Boost headers (for
+Requires a C++20 compiler, CMake ≥ 3.24, and Boost headers (for
 `boost::multiprecision`, used to support multirelational VCPs whose address
 space exceeds 64 bits). On Debian/Ubuntu:
 
@@ -50,6 +50,14 @@ cmake --build build
 ```
 
 The tools will be placed in `build/` after a successful build.
+
+To force a fresh configure (drop the cached CMake state and reconfigure
+from scratch — useful after changing the C++ standard, toolchain, or
+build options):
+
+```bash
+cmake -B build --fresh
+```
 
 The `MAX_NEIGHBORS` compile-time cap (default: 16384) can be adjusted at
 configure time:
