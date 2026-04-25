@@ -283,4 +283,6 @@ algorithms implemented here:
 
 ## License
 
-GPL-3.0 — see [LICENSE](LICENSE).
+BSD 3-Clause — see [LICENSE](LICENSE). Versions prior to 2.0.0 were
+released under GPL-3.0-or-later; downstream users who received those
+earlier releases retain their rights under that license.

@@ -17,7 +17,7 @@ authors:
     given-names: Ryan N.
     email: rlichtenwalter@gmail.com
 repository-code: "https://git.lichtenwalter.site/rlichten/vcp"
-license: GPL-3.0-or-later
+license: BSD-3-Clause
 version: 2.0.0
 preferred-citation:
   type: article
