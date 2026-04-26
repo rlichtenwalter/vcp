@@ -14,14 +14,10 @@
 #include <stdexcept>
 #include <string>
 #include <system_error>
+#include <vcp/graph.hpp>
 #include <vector>
 
 namespace vcp {
-
-using vertex_id_t = std::size_t;
-using edge_id_t = std::size_t;
-using const_vertex_iterator = void *const *;
-using const_edge_iterator = void *const *;
 
 /**
  * @brief Directed graph with both out-edge and in-edge CSR adjacency lists.

@@ -165,6 +165,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `vcp_static_mapper::operator<<` now uses `std::ranges::copy(c, out)` instead of `std::copy(c.begin(), c.end(), out)`. Three `std::max_element(c.begin(), c.end())` calls in `test/test_vcp_4_1_0.cpp` and `test/test_vcp_4_1_1.cpp` (six total) are correspondingly migrated to `std::ranges::max_element(c)`. Two `REQUIRE` lines in `test/test_square_matrix.cpp` that compared a fixed-size matrix cell against a `static_cast<int>(size_t expr)` are rewritten to land both sides into named `int` locals before the comparison so `modernize-use-integer-sign-comparison` does not fire through the cast. The `top_two_neighborhood_size_directed` helper added in this release is also restructured to count the out/in intersection in a single-loop-variable form so `bugprone-infinite-loop` no longer false-fires through the templated graph type. Aggregate effect: clang-tidy 20.x runs clean across the headers, tools, and tests with no behavior change.
 
 ### Removed
+- Redundant `using vertex_id_t = std::size_t; using edge_id_t = std::size_t;
+  using const_vertex_iterator = void *const *; using const_edge_iterator = void
+  *const *;` declarations from `directed_graph.hpp`,
+  `multirelational_graph.hpp`, and `multirelational_directed_graph.hpp`. All
+  three duplicated the same four namespace-scope `using` declarations that
+  `graph.hpp` already provides. They were defensive duplicates from the era
+  before C++11 nailed down two-phase template name lookup; modern compilers
+  do not need them. `directed_graph.hpp` now `#include`s `<vcp/graph.hpp>`
+  to inherit them; the multirelational headers already pulled `graph.hpp`
+  in transitively. `graph.hpp` becomes the single source of truth for these
+  fundamental aliases.
 - Dead template-metafunction primitives `vcp::TMP_power`, `vcp::TMP_min`, and `vcp::TMP_max` in
   `vcp_dynamic_mapper.hpp`. These enum-trick metafunctions predated `constexpr` and were
   unreferenced anywhere in the codebase; removed without replacement.
