@@ -23,6 +23,8 @@ repos:
         exclude: ^regression/fixtures/
       - id: check-yaml
         stages: [pre-commit]
+      - id: check-json
+        stages: [pre-commit]
       - id: check-added-large-files
         stages: [pre-commit]
         args: [--maxkb=1000]
