@@ -553,7 +553,7 @@ vcp<4, 1, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
                               v2_in_neighbors_end);
   }
 
-  unsigned long v3_count(static_cast<unsigned long>(v3Vertices_end - v3Vertices_begin));
+  auto v3_count = static_cast<unsigned long>(v3Vertices_end - v3Vertices_begin);
   unsigned long v4_count(0);
   for (std::pair<const_vertex_iterator, unsigned short> *it1(v3Vertices_begin);
        it1 != v3Vertices_end; ++it1) { // for each v3 vertex computed above

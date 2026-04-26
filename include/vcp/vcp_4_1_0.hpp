@@ -112,7 +112,7 @@ vcp<4, 1, false>::generate_vector(const_vertex_iterator v1, const_vertex_iterato
   // v1v2 is a small bitmask carrying the V1V2 connectivity bit.
   // unsigned char is wide enough; matches the storage type of
   // v3Vertices_end->second (the destination for v1v2+V1V3 etc. below).
-  unsigned char const v1v2(static_cast<unsigned char>(V1V2 * g.edge_exists(v1, v2)));
+  auto const v1v2 = static_cast<unsigned char>(V1V2 * g.edge_exists(v1, v2));
 
   unsigned long connections(0);
   unsigned long gaps(0);
@@ -173,7 +173,7 @@ vcp<4, 1, false>::generate_vector(const_vertex_iterator v1, const_vertex_iterato
     ++v2_neighbors_it;
   }
 
-  unsigned long v3_count(static_cast<unsigned long>(v3Vertices_end - v3Vertices_begin));
+  auto v3_count = static_cast<unsigned long>(v3Vertices_end - v3Vertices_begin);
   unsigned long v4_count(0);
   for (std::pair<const_vertex_iterator, unsigned char> *it1(v3Vertices_begin);
        it1 != v3Vertices_end; ++it1) { // for each v3 vertex computed above
