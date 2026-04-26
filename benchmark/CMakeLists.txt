@@ -32,7 +32,7 @@ target_link_libraries(bench_vcp PRIVATE vcp::vcp Catch2::Catch2WithMain)
 target_compile_definitions(bench_vcp PRIVATE NDEBUG)
 target_compile_options(bench_vcp PRIVATE
     -O3
-    -Wall -Wextra -pedantic -Wno-unused-local-typedefs
+    ${VCP_WARNING_FLAGS}
 )
 # Propagate VCP_SANITIZE flags if enabled at the root. Sanitized
 # benchmarks are mostly a smoke signal - the -O3 force here fights with

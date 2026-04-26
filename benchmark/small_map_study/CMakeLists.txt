@@ -16,6 +16,8 @@ if(VCP_BUILD_K_PROBE)
     target_include_directories(k_probe_tool PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
     )
+    # Opt-in dev harness: -Wall -Wextra -pedantic without -Werror so a future
+    # compiler warning does not break a reproducible study artifact.
     target_compile_options(k_probe_tool PRIVATE -O3 -Wall -Wextra -pedantic)
 
     add_executable(bench_container_mix bench_container_mix.cpp)
