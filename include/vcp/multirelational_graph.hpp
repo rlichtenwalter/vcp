@@ -64,16 +64,22 @@ public:
   /** @brief Copy-construct a graph, deep-copying CSR arrays and edge-value array. */
   multirelational_graph(multirelational_graph const &);
 
+  /** @brief Move-construct in O(1) by transferring ownership of the CSR and edge-value arrays. */
+  multirelational_graph(multirelational_graph &&) noexcept = default;
+
   ~multirelational_graph();
 
   /** @brief Copy-assign a graph, deep-copying CSR arrays and edge-value array. */
   multirelational_graph &operator=(multirelational_graph const &);
 
+  /** @brief Move-assign in O(1) by transferring ownership of the CSR and edge-value arrays. */
+  multirelational_graph &operator=(multirelational_graph &&) noexcept = default;
+
   /** @brief Return the number of vertices. */
-  std::size_t vertex_count() const;
+  [[nodiscard]] std::size_t vertex_count() const noexcept;
 
   /** @brief Return the number of undirected edges (each pair counted once). */
-  std::size_t edge_count() const;
+  [[nodiscard]] std::size_t edge_count() const noexcept;
 
   /**
    * @brief Return the number of active relations in the loaded graph.
@@ -83,19 +89,19 @@ public:
    * the template parameter `r` (which is the capacity). Returns 0 for an
    * empty graph or one whose edges all have bitmask 0.
    */
-  std::size_t relation_count() const;
+  [[nodiscard]] std::size_t relation_count() const;
 
   /** @brief Return an iterator to the first vertex. */
-  const_vertex_iterator vertices_begin() const;
+  [[nodiscard]] const_vertex_iterator vertices_begin() const noexcept;
 
   /** @brief Return a past-the-end iterator for vertices. */
-  const_vertex_iterator vertices_end() const;
+  [[nodiscard]] const_vertex_iterator vertices_end() const noexcept;
 
   /** @brief Return an iterator to the first edge slot in the CSR edge array. */
-  const_edge_iterator edges_begin() const;
+  [[nodiscard]] const_edge_iterator edges_begin() const noexcept;
 
   /** @brief Return a past-the-end iterator for the CSR edge array. */
-  const_edge_iterator edges_end() const;
+  [[nodiscard]] const_edge_iterator edges_end() const noexcept;
 
   /**
    * @brief Return an iterator to the first neighbor of the given vertex.
@@ -103,7 +109,7 @@ public:
    * @param it Iterator to a vertex in this graph.
    * @return Iterator to the first neighbor edge slot.
    */
-  const_edge_iterator neighbors_begin(const_vertex_iterator it) const;
+  [[nodiscard]] const_edge_iterator neighbors_begin(const_vertex_iterator it) const noexcept;
 
   /**
    * @brief Return a past-the-end iterator for the neighbors of the given vertex.
@@ -111,7 +117,7 @@ public:
    * @param it Iterator to a vertex in this graph.
    * @return Past-the-end iterator for the neighbor range.
    */
-  const_edge_iterator neighbors_end(const_vertex_iterator it) const;
+  [[nodiscard]] const_edge_iterator neighbors_end(const_vertex_iterator it) const noexcept;
 
   /**
    * @brief Return the integer id of the given vertex.
@@ -119,7 +125,7 @@ public:
    * @param it Vertex iterator obtained from this graph.
    * @return Zero-based vertex identifier.
    */
-  vertex_id_t vertex_id(const_vertex_iterator it) const;
+  [[nodiscard]] vertex_id_t vertex_id(const_vertex_iterator it) const noexcept;
 
   /**
    * @brief Return the vertex pointed to by an edge iterator.
@@ -127,7 +133,7 @@ public:
    * @param it Edge iterator within a neighbor range.
    * @return Iterator to the target vertex of the edge.
    */
-  const_vertex_iterator target_of(const_edge_iterator it) const;
+  [[nodiscard]] const_vertex_iterator target_of(const_edge_iterator it) const noexcept;
 
   /**
    * @brief Return the integer id of the given edge slot.
@@ -135,7 +141,7 @@ public:
    * @param it Edge iterator obtained from this graph.
    * @return Zero-based offset of @p it within the CSR edge array.
    */
-  edge_id_t edge_id(const_edge_iterator it) const;
+  [[nodiscard]] edge_id_t edge_id(const_edge_iterator it) const noexcept;
 
   /**
    * @brief Return true if @p it refers to an existing edge (i.e., is not edges_end()).
@@ -143,7 +149,7 @@ public:
    * @param it Edge iterator to test.
    * @return True if @p it != edges_end().
    */
-  bool edge_exists(const_edge_iterator it) const;
+  [[nodiscard]] bool edge_exists(const_edge_iterator it) const noexcept;
 
   /**
    * @brief Find the edge between two vertices and return an iterator to it.
@@ -155,7 +161,8 @@ public:
    * @param target Iterator to the target vertex.
    * @return Iterator to the edge, or edges_end() if absent.
    */
-  const_edge_iterator edge(const_vertex_iterator source, const_vertex_iterator target) const;
+  [[nodiscard]] const_edge_iterator edge(const_vertex_iterator source,
+                                         const_vertex_iterator target) const;
 
   /**
    * @brief Return the relation bitmask stored on the edge at @p it.
@@ -166,7 +173,7 @@ public:
    * @param it Edge iterator within the CSR edge array.
    * @return The r-bit relation bitmask, or 0 if @p it == edges_end().
    */
-  connectivity_address_type edge_value(const_edge_iterator it) const;
+  [[nodiscard]] connectivity_address_type edge_value(const_edge_iterator it) const;
 
   /**
    * @brief Return true if an edge exists between @p source and @p target.
@@ -175,7 +182,7 @@ public:
    * @param target Iterator to the target vertex.
    * @return True if the edge is present.
    */
-  bool edge_exists(const_vertex_iterator source, const_vertex_iterator target) const;
+  [[nodiscard]] bool edge_exists(const_vertex_iterator source, const_vertex_iterator target) const;
 
   template <std::size_t r_>
   friend std::ostream &operator<<(std::ostream &, multirelational_graph<r_> const &);
@@ -243,11 +250,11 @@ multirelational_graph<r> &multirelational_graph<r>::operator=(multirelational_gr
   return *this;
 }
 
-template <std::size_t r> std::size_t multirelational_graph<r>::vertex_count() const {
+template <std::size_t r> std::size_t multirelational_graph<r>::vertex_count() const noexcept {
   return num_vertices;
 }
 
-template <std::size_t r> std::size_t multirelational_graph<r>::edge_count() const {
+template <std::size_t r> std::size_t multirelational_graph<r>::edge_count() const noexcept {
   return num_edges / 2;
 }
 
@@ -278,47 +285,54 @@ template <std::size_t r> std::size_t multirelational_graph<r>::relation_count() 
   }
 }
 
-template <std::size_t r> const_vertex_iterator multirelational_graph<r>::vertices_begin() const {
+template <std::size_t r>
+const_vertex_iterator multirelational_graph<r>::vertices_begin() const noexcept {
   return &vertices[0];
 }
 
-template <std::size_t r> const_vertex_iterator multirelational_graph<r>::vertices_end() const {
+template <std::size_t r>
+const_vertex_iterator multirelational_graph<r>::vertices_end() const noexcept {
   return &vertices[vertex_count()];
 }
 
-template <std::size_t r> const_vertex_iterator multirelational_graph<r>::edges_begin() const {
+template <std::size_t r>
+const_edge_iterator multirelational_graph<r>::edges_begin() const noexcept {
   return &edges[0];
 }
 
-template <std::size_t r> const_vertex_iterator multirelational_graph<r>::edges_end() const {
+template <std::size_t r> const_edge_iterator multirelational_graph<r>::edges_end() const noexcept {
   return &edges[num_edges];
 }
 
 template <std::size_t r>
-const_edge_iterator multirelational_graph<r>::neighbors_begin(const_vertex_iterator it) const {
+const_edge_iterator
+multirelational_graph<r>::neighbors_begin(const_vertex_iterator it) const noexcept {
   return static_cast<const_edge_iterator>(*it);
 }
 
 template <std::size_t r>
-const_edge_iterator multirelational_graph<r>::neighbors_end(const_vertex_iterator it) const {
+const_edge_iterator
+multirelational_graph<r>::neighbors_end(const_vertex_iterator it) const noexcept {
   return static_cast<const_edge_iterator>(*(it + 1));
 }
 
 template <std::size_t r>
-vertex_id_t multirelational_graph<r>::vertex_id(const_vertex_iterator it) const {
+vertex_id_t multirelational_graph<r>::vertex_id(const_vertex_iterator it) const noexcept {
   return it - static_cast<const_vertex_iterator>(vertices.get());
 }
 
 template <std::size_t r>
-const_vertex_iterator multirelational_graph<r>::target_of(const_edge_iterator it) const {
+const_vertex_iterator multirelational_graph<r>::target_of(const_edge_iterator it) const noexcept {
   return static_cast<const_vertex_iterator>(*it);
 }
 
-template <std::size_t r> edge_id_t multirelational_graph<r>::edge_id(const_edge_iterator it) const {
+template <std::size_t r>
+edge_id_t multirelational_graph<r>::edge_id(const_edge_iterator it) const noexcept {
   return it - static_cast<const_edge_iterator>(edges.get());
 }
 
-template <std::size_t r> bool multirelational_graph<r>::edge_exists(const_edge_iterator it) const {
+template <std::size_t r>
+bool multirelational_graph<r>::edge_exists(const_edge_iterator it) const noexcept {
   return it != edges_end();
 }
 

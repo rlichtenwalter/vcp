@@ -10,7 +10,9 @@
 
 namespace vcp {
 
-template <std::size_t n, std::size_t r, bool d> class vcp;
+template <std::size_t n, std::size_t r, bool d>
+  requires(n >= 2 && r >= 1)
+class vcp;
 
 /**
  * @brief Full specialization of vcp for 3-vertex subgraphs on a single-relation directed graph.
@@ -41,7 +43,7 @@ public:
    *
    * @return 64.
    */
-  constexpr static std::size_t element_count();
+  [[nodiscard]] constexpr static std::size_t element_count() noexcept;
 
   /**
    * @brief Compute the VCP feature vector for the pivot pair (v1, v2).
@@ -53,8 +55,8 @@ public:
    * @param v2 Iterator to the second pivot vertex.
    * @return Array of 64 occurrence counts indexed by element address.
    */
-  std::array<unsigned long, num_elements> const generate_vector(const_vertex_iterator v1,
-                                                                const_vertex_iterator v2);
+  [[nodiscard]] std::array<unsigned long, num_elements> generate_vector(const_vertex_iterator v1,
+                                                                        const_vertex_iterator v2);
 
 private:
   enum directedness_value : std::size_t { OUT = 1, IN = 2, BOTH = 3 };
@@ -71,7 +73,7 @@ private:
                      const_edge_iterator end2) const;
 };
 
-constexpr std::size_t vcp<3, 1, true>::element_count() { return num_elements; }
+constexpr std::size_t vcp<3, 1, true>::element_count() noexcept { return num_elements; }
 
 inline vcp<3, 1, true>::vcp(directed_graph const &g) : g(g) {}
 
@@ -98,8 +100,8 @@ std::pair<const_edge_iterator, vcp<3, 1, true>::directedness_value> inline vcp<
   }
 }
 
-std::array<unsigned long, vcp<3, 1, true>::element_count()> const inline vcp<
-    3, 1, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator v2) {
+inline std::array<unsigned long, vcp<3, 1, true>::element_count()>
+vcp<3, 1, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator v2) {
   std::array<unsigned long, element_count()> counts = {{0}};
 
   std::size_t v1v2(g.out_edge_exists(v1, v2) * OUT + g.in_edge_exists(v1, v2) * IN);

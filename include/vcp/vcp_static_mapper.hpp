@@ -43,7 +43,7 @@ public:
    * @param d True for directed; false for undirected.
    * @return Total number of subgraph addresses.
    */
-  static std::size_t subgraph_count(std::size_t n, std::size_t r, bool d);
+  [[nodiscard]] static std::size_t subgraph_count(std::size_t n, std::size_t r, bool d);
 
   /**
    * @brief Construct the mapper and build the full isomorphism lookup table.
@@ -58,13 +58,13 @@ public:
   vcp_static_mapper(std::size_t n, std::size_t r, bool d);
 
   /** @brief Return the subgraph vertex count. */
-  std::size_t n() const;
+  [[nodiscard]] std::size_t n() const noexcept;
 
   /** @brief Return the number of edge relations. */
-  std::size_t r() const;
+  [[nodiscard]] std::size_t r() const noexcept;
 
   /** @brief Return true if the mapper was constructed for directed graphs. */
-  bool d() const;
+  [[nodiscard]] bool d() const noexcept;
 
   /**
    * @brief Compute the subgraph address for the given fixed-size connectivity matrix.
@@ -74,7 +74,8 @@ public:
    * @return Packed subgraph address integer.
    */
   template <std::size_t n>
-  std::size_t subgraph_address(square_matrix<std::size_t, n> const &connectivity) const;
+  [[nodiscard]] std::size_t
+  subgraph_address(square_matrix<std::size_t, n> const &connectivity) const;
 
   /**
    * @brief Compute the canonical element address for the given fixed-size connectivity matrix.
@@ -84,7 +85,8 @@ public:
    * @return Canonical element address in [0, element_count).
    */
   template <std::size_t n>
-  std::size_t element_address(square_matrix<std::size_t, n> const &connectivity) const;
+  [[nodiscard]] std::size_t
+  element_address(square_matrix<std::size_t, n> const &connectivity) const;
 
   /**
    * @brief Compute the subgraph address for the given dynamic connectivity matrix.
@@ -92,7 +94,7 @@ public:
    * @param connectivity Dynamic square matrix of edge relation values.
    * @return Packed subgraph address integer.
    */
-  std::size_t subgraph_address(square_matrix<std::size_t> const &connectivity) const;
+  [[nodiscard]] std::size_t subgraph_address(square_matrix<std::size_t> const &connectivity) const;
 
   /**
    * @brief Compute the canonical element address for the given dynamic connectivity matrix.
@@ -100,7 +102,7 @@ public:
    * @param connectivity Dynamic square matrix of edge relation values.
    * @return Canonical element address in [0, element_count).
    */
-  std::size_t element_address(square_matrix<std::size_t> const &connectivity) const;
+  [[nodiscard]] std::size_t element_address(square_matrix<std::size_t> const &connectivity) const;
 
   /**
    * @brief Look up the canonical element address from a precomputed subgraph address.
@@ -110,7 +112,7 @@ public:
    * @param subgraph_address Packed subgraph address previously computed by subgraph_address().
    * @return Canonical element address.
    */
-  std::size_t element_address(std::size_t subgraph_address) const;
+  [[nodiscard]] std::size_t element_address(std::size_t subgraph_address) const;
 
   /**
    * @brief Reconstruct the connectivity matrix for the given element address.
@@ -121,7 +123,7 @@ public:
    * @param element_address Canonical element address in [0, element_count).
    * @return Connectivity matrix reconstructed from the element address.
    */
-  square_matrix<std::size_t> element_structure(std::size_t element_address) const;
+  [[nodiscard]] square_matrix<std::size_t> element_structure(std::size_t element_address) const;
 
   friend std::ostream &operator<<(std::ostream &os, vcp_static_mapper const &mapper);
 

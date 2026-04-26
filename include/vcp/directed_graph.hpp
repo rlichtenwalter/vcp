@@ -51,16 +51,22 @@ public:
   /** @brief Copy-construct a directed graph, deep-copying both CSR arrays. */
   directed_graph(directed_graph const &);
 
+  /** @brief Move-construct in O(1) by transferring ownership of the CSR arrays. */
+  directed_graph(directed_graph &&) noexcept = default;
+
   ~directed_graph();
 
   /** @brief Copy-assign a directed graph, deep-copying both CSR arrays. */
   directed_graph &operator=(directed_graph const &);
 
+  /** @brief Move-assign in O(1) by transferring ownership of the CSR arrays. */
+  directed_graph &operator=(directed_graph &&) noexcept = default;
+
   /** @brief Return the number of vertices. */
-  std::size_t vertex_count() const;
+  [[nodiscard]] std::size_t vertex_count() const noexcept;
 
   /** @brief Return the number of directed out-edges. */
-  std::size_t out_edge_count() const;
+  [[nodiscard]] std::size_t out_edge_count() const noexcept;
 
   /**
    * @brief Return the number of directed in-edges.
@@ -68,25 +74,25 @@ public:
    * Because each out-edge implies exactly one in-edge, this always equals
    * out_edge_count().
    */
-  std::size_t in_edge_count() const;
+  [[nodiscard]] std::size_t in_edge_count() const noexcept;
 
   /** @brief Return an iterator to the first vertex. */
-  const_vertex_iterator vertices_begin() const;
+  [[nodiscard]] const_vertex_iterator vertices_begin() const noexcept;
 
   /** @brief Return a past-the-end iterator for vertices. */
-  const_vertex_iterator vertices_end() const;
+  [[nodiscard]] const_vertex_iterator vertices_end() const noexcept;
 
   /** @brief Return an iterator to the first slot in the out-edge block. */
-  const_edge_iterator out_edges_begin() const;
+  [[nodiscard]] const_edge_iterator out_edges_begin() const noexcept;
 
   /** @brief Return a past-the-end iterator for the out-edge block. */
-  const_edge_iterator out_edges_end() const;
+  [[nodiscard]] const_edge_iterator out_edges_end() const noexcept;
 
   /** @brief Return an iterator to the first slot in the in-edge block. */
-  const_edge_iterator in_edges_begin() const;
+  [[nodiscard]] const_edge_iterator in_edges_begin() const noexcept;
 
   /** @brief Return a past-the-end iterator for the in-edge block. */
-  const_edge_iterator in_edges_end() const;
+  [[nodiscard]] const_edge_iterator in_edges_end() const noexcept;
 
   /**
    * @brief Return an iterator to the first out-neighbor of the given vertex.
@@ -94,7 +100,7 @@ public:
    * @param it Iterator to a vertex in this graph.
    * @return Iterator to the first out-neighbor edge slot.
    */
-  const_edge_iterator out_neighbors_begin(const_vertex_iterator it) const;
+  [[nodiscard]] const_edge_iterator out_neighbors_begin(const_vertex_iterator it) const noexcept;
 
   /**
    * @brief Return a past-the-end iterator for out-neighbors of the given vertex.
@@ -102,7 +108,7 @@ public:
    * @param it Iterator to a vertex in this graph.
    * @return Past-the-end iterator for the out-neighbor range.
    */
-  const_edge_iterator out_neighbors_end(const_vertex_iterator it) const;
+  [[nodiscard]] const_edge_iterator out_neighbors_end(const_vertex_iterator it) const noexcept;
 
   /**
    * @brief Return an iterator to the first in-neighbor of the given vertex.
@@ -110,7 +116,7 @@ public:
    * @param it Iterator to a vertex in this graph.
    * @return Iterator to the first in-neighbor edge slot.
    */
-  const_edge_iterator in_neighbors_begin(const_vertex_iterator it) const;
+  [[nodiscard]] const_edge_iterator in_neighbors_begin(const_vertex_iterator it) const noexcept;
 
   /**
    * @brief Return a past-the-end iterator for in-neighbors of the given vertex.
@@ -118,7 +124,7 @@ public:
    * @param it Iterator to a vertex in this graph.
    * @return Past-the-end iterator for the in-neighbor range.
    */
-  const_edge_iterator in_neighbors_end(const_vertex_iterator it) const;
+  [[nodiscard]] const_edge_iterator in_neighbors_end(const_vertex_iterator it) const noexcept;
 
   /**
    * @brief Return the integer id of the given vertex.
@@ -126,7 +132,7 @@ public:
    * @param it Vertex iterator obtained from this graph.
    * @return Zero-based vertex identifier.
    */
-  vertex_id_t vertex_id(const_vertex_iterator it) const;
+  [[nodiscard]] vertex_id_t vertex_id(const_vertex_iterator it) const noexcept;
 
   /**
    * @brief Return the vertex pointed to by an edge iterator.
@@ -134,7 +140,7 @@ public:
    * @param it Edge iterator within an out- or in-neighbor range.
    * @return Iterator to the target vertex of the edge.
    */
-  const_vertex_iterator target_of(const_edge_iterator it) const;
+  [[nodiscard]] const_vertex_iterator target_of(const_edge_iterator it) const noexcept;
 
   /**
    * @brief Return the integer id of the given edge slot.
@@ -142,7 +148,7 @@ public:
    * @param it Edge iterator obtained from this graph.
    * @return Zero-based offset of @p it within the combined edge array.
    */
-  edge_id_t edge_id(const_edge_iterator it) const;
+  [[nodiscard]] edge_id_t edge_id(const_edge_iterator it) const noexcept;
 
   /**
    * @brief Return true if @p it refers to an existing edge (i.e., is not in_edges_end()).
@@ -150,7 +156,7 @@ public:
    * @param it Edge iterator to test.
    * @return True if @p it != in_edges_end().
    */
-  bool edge_exists(const_edge_iterator it) const;
+  [[nodiscard]] bool edge_exists(const_edge_iterator it) const noexcept;
 
   /**
    * @brief Find the directed out-edge from @p source to @p target.
@@ -162,7 +168,8 @@ public:
    * @param target Iterator to the target vertex.
    * @return Iterator to the out-edge, or in_edges_end() if absent.
    */
-  const_edge_iterator out_edge(const_vertex_iterator source, const_vertex_iterator target) const;
+  [[nodiscard]] const_edge_iterator out_edge(const_vertex_iterator source,
+                                             const_vertex_iterator target) const;
 
   /**
    * @brief Find the directed in-edge from @p source to @p target.
@@ -174,7 +181,8 @@ public:
    * @param target Iterator to the target vertex.
    * @return Iterator to the in-edge, or in_edges_end() if absent.
    */
-  const_edge_iterator in_edge(const_vertex_iterator source, const_vertex_iterator target) const;
+  [[nodiscard]] const_edge_iterator in_edge(const_vertex_iterator source,
+                                            const_vertex_iterator target) const;
 
   /**
    * @brief Return true if a directed out-edge exists from @p source to @p target.
@@ -183,7 +191,8 @@ public:
    * @param target Iterator to the target vertex.
    * @return True if the out-edge is present.
    */
-  bool out_edge_exists(const_vertex_iterator source, const_vertex_iterator target) const;
+  [[nodiscard]] bool out_edge_exists(const_vertex_iterator source,
+                                     const_vertex_iterator target) const;
 
   /**
    * @brief Return true if a directed in-edge exists from @p source to @p target.
@@ -192,7 +201,8 @@ public:
    * @param target Iterator to the target vertex.
    * @return True if the in-edge is present.
    */
-  bool in_edge_exists(const_vertex_iterator source, const_vertex_iterator target) const;
+  [[nodiscard]] bool in_edge_exists(const_vertex_iterator source,
+                                    const_vertex_iterator target) const;
 
   friend std::ostream &operator<<(std::ostream &, directed_graph const &);
   friend std::istream &operator>>(std::istream &, directed_graph &);
@@ -254,61 +264,67 @@ inline directed_graph &directed_graph::operator=(directed_graph const &g) {
   return *this;
 }
 
-inline std::size_t directed_graph::vertex_count() const { return num_vertices; }
+inline std::size_t directed_graph::vertex_count() const noexcept { return num_vertices; }
 
-inline std::size_t directed_graph::out_edge_count() const { return num_out_edges; }
+inline std::size_t directed_graph::out_edge_count() const noexcept { return num_out_edges; }
 
-inline std::size_t directed_graph::in_edge_count() const { return num_out_edges; }
+inline std::size_t directed_graph::in_edge_count() const noexcept { return num_out_edges; }
 
-inline const_vertex_iterator directed_graph::vertices_begin() const { return &vertices[0]; }
+inline const_vertex_iterator directed_graph::vertices_begin() const noexcept {
+  return &vertices[0];
+}
 
-inline const_vertex_iterator directed_graph::vertices_end() const {
+inline const_vertex_iterator directed_graph::vertices_end() const noexcept {
   return &vertices[vertex_count()];
 }
 
-inline const_edge_iterator directed_graph::out_edges_begin() const { return &edges[0]; }
+inline const_edge_iterator directed_graph::out_edges_begin() const noexcept { return &edges[0]; }
 
-inline const_edge_iterator directed_graph::out_edges_end() const {
+inline const_edge_iterator directed_graph::out_edges_end() const noexcept {
   return &edges[out_edge_count()];
 }
 
-inline const_edge_iterator directed_graph::in_edges_begin() const {
+inline const_edge_iterator directed_graph::in_edges_begin() const noexcept {
   return &edges[out_edge_count()];
 }
 
-inline const_edge_iterator directed_graph::in_edges_end() const {
+inline const_edge_iterator directed_graph::in_edges_end() const noexcept {
   return &edges[out_edge_count() + in_edge_count()];
 }
 
-inline const_edge_iterator directed_graph::out_neighbors_begin(const_vertex_iterator it) const {
+inline const_edge_iterator
+directed_graph::out_neighbors_begin(const_vertex_iterator it) const noexcept {
   return static_cast<const_edge_iterator>(*it);
 }
 
-inline const_edge_iterator directed_graph::out_neighbors_end(const_vertex_iterator it) const {
+inline const_edge_iterator
+directed_graph::out_neighbors_end(const_vertex_iterator it) const noexcept {
   return static_cast<const_edge_iterator>(*(it + 1));
 }
 
-inline const_edge_iterator directed_graph::in_neighbors_begin(const_vertex_iterator it) const {
+inline const_edge_iterator
+directed_graph::in_neighbors_begin(const_vertex_iterator it) const noexcept {
   return static_cast<const_edge_iterator>(*(vertex_count() + it));
 }
 
-inline const_edge_iterator directed_graph::in_neighbors_end(const_vertex_iterator it) const {
+inline const_edge_iterator
+directed_graph::in_neighbors_end(const_vertex_iterator it) const noexcept {
   return static_cast<const_edge_iterator>(*(vertex_count() + it + 1));
 }
 
-inline vertex_id_t directed_graph::vertex_id(const_vertex_iterator it) const {
+inline vertex_id_t directed_graph::vertex_id(const_vertex_iterator it) const noexcept {
   return it - static_cast<const_vertex_iterator>(vertices.get());
 }
 
-inline const_vertex_iterator directed_graph::target_of(const_edge_iterator it) const {
+inline const_vertex_iterator directed_graph::target_of(const_edge_iterator it) const noexcept {
   return static_cast<const_vertex_iterator>(*it);
 }
 
-inline edge_id_t directed_graph::edge_id(const_edge_iterator it) const {
+inline edge_id_t directed_graph::edge_id(const_edge_iterator it) const noexcept {
   return it - static_cast<const_edge_iterator>(edges.get());
 }
 
-inline bool directed_graph::edge_exists(const_edge_iterator it) const {
+inline bool directed_graph::edge_exists(const_edge_iterator it) const noexcept {
   return it != in_edges_end();
 }
 

@@ -40,6 +40,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `CITATION.cff` at the repository root for academic citation metadata. Preferred citation is the open-access 2014 SpringerPlus paper; the 2012 WWW conference paper is included under references. Gitea and GitHub render a "Cite this repository" affordance from this file.
 
 ### Changed
+- All four graph foundation classes (`graph`, `directed_graph`, `multirelational_graph`,
+  `multirelational_directed_graph`) now declare a defaulted noexcept move constructor and move
+  assignment operator. Previously each declared a copy constructor, copy-assignment operator,
+  and destructor without an explicit move pair. Per the rule of five, declaring any of those
+  three suppresses the compiler-generated implicit moves; downstream code holding a graph in
+  a `std::vector<graph>` would silently fall back to copying the two heap-allocated CSR arrays
+  (and the `connectivity_address_type[]` array on the multirelational classes) on every
+  reallocation. With the new defaulted moves, vector resizes and pass-by-value moves are
+  O(1) pointer swaps. The defaults are correct because every member is a `unique_ptr<T[]>`,
+  whose move is noexcept and transfers ownership; no callers are broken.
+- `[[nodiscard]]` added to every observer on the public API surface. Coverage:
+  `vertex_count`, `edge_count`, `relation_count`, `vertices_begin`/`end`, `edges_begin`/`end`,
+  `out_/in_edges_begin`/`end`, `neighbors_begin`/`end`, `out_/in_neighbors_begin`/`end`,
+  `vertex_id`, `target_of`, `edge_id`, `edge_exists` (both overloads), `edge` /
+  `out_edge` / `in_edge` (the find-edge family — highest-risk silent-discard targets,
+  since they return a nullable iterator), `edge_value`, the four `*_edge_exists` overloads,
+  and on `square_matrix::size`, `square_matrix::operator()` (const overload only — non-const
+  is the setter idiom and follows `std::vector::operator[]` convention by omission), the
+  full `vcp_dynamic_mapper` and `vcp_static_mapper` observer surfaces (`subgraph_count`,
+  `subgraph_address`, `canonical_subgraph_address`, `element_address`, `element_structure`,
+  `n`/`r`/`d` accessors), and `generate_vector` on the primary `vcp` template plus all eight
+  specializations. C++17 attribute (P0189R1); discarding the return on a public observer is
+  always wrong and now produces a compiler warning. Pure additive change with zero ABI impact.
+- `noexcept` added to one-line accessors on the four graph foundation classes
+  (`vertex_count`, `edge_count`, `out_/in_edge_count`, `vertices_begin`/`end`,
+  `edges_begin`/`end`, `out_/in_edges_begin`/`end`, `neighbors_*`, `out_/in_neighbors_*`,
+  `vertex_id`, `target_of`, `edge_id`, single-iterator `edge_exists`) and on
+  `square_matrix::size`, plus the defaulted move ctor/assign added in this release. Required
+  on the moves so `std::vector<graph>` reallocations actually move (a throwing move would
+  force a copy fallback). The accessors are trivially non-throwing — no allocation, no
+  exception path — and `noexcept` documents the contract for downstream `noexcept`-correctness
+  analysis.
+- Top-level `const` dropped from the return type of `generate_vector` across the primary
+  `vcp` template (`vcp.hpp`) and all eight specializations (`vcp_3_1_0.hpp`,
+  `vcp_3_1_1.hpp`, `vcp_3_r_0.hpp`, `vcp_3_r_1.hpp`, `vcp_4_1_0.hpp`, `vcp_4_1_1.hpp`,
+  `vcp_4_r_0.hpp`, `vcp_4_r_1.hpp`). The previous `std::map<...> const generate_vector(...)`
+  / `std::array<unsigned long, N> const generate_vector(...)` form put `const` on the
+  returned rvalue, which prevented the call site's `auto m = v.generate_vector(...)` from
+  selecting the move constructor (a const rvalue can only bind to a copy ctor's `const T&`),
+  silently forcing a copy of the std::map's internal tree on every call. Forbidden by Core
+  Guidelines F.49 and warned by `-Wignored-qualifiers`. No call site breaks because `auto`
+  on an rvalue already strips top-level `const`; the only behavioral change is that callers
+  now move instead of copy. Affects 18 declaration/definition pairs total.
+- The primary `vcp<n, r, d>` template now carries a C++20 requires-clause:
+  `requires (n >= 2 && r >= 1)`. Previously, an instantiation like `vcp<0, 0, false>` would
+  proceed into the body and emit a deep template-error cascade out of `vcp_dynamic_mapper`
+  (40+ lines of unrelated diagnostics). With the constraint, the same instantiation now
+  produces a single-line "the expression 'n >= 2 [with n = 0]' evaluated to 'false'"
+  diagnostic at the use site. The constraint is repeated on the eight forward declarations
+  in the specialization headers because all redeclarations of a constrained primary must
+  carry identical constraints; partial and explicit specializations still match correctly
+  (n ∈ {3, 4} and r ∈ {1, template parameter} satisfy the constraint at every active
+  instantiation).
 - **BREAKING**: CMake minimum requirement raised from 3.21 to 3.24. CMake 3.24 introduced `cmake -B build --fresh`, a one-command cache clobber + reconfigure that eliminates the ad-hoc `rm -rf build/CMakeCache.txt` pattern. All current target distros ship CMake >= 3.24 in their default repositories (Rocky Linux 9 AppStream = 3.26.5, Rocky Linux 10 AppStream = 3.30.5, Ubuntu 24.04 LTS = 3.28.x), so the bump imposes no new constraint on contributors. Sibling C++ libraries (`kdtree`, `mRMR`) receive the same bump in coordinated PRs.
 - **BREAKING**: Minimum C++ standard raised from C++14 to C++20. Sets `cxx_std_20` in `target_compile_features`. The bump enables the modernizations applied in this release (`std::bit_width`, `std::conditional_t` simplifications in graph-type dispatch, broader `if constexpr` dispatch where it improves clarity). Three internal enums (`vcp_3_r_1.hpp`, `vcp_3_1_1.hpp`, `vcp_4_1_1.hpp`) had cross-enum bit-shift arithmetic — `V1V2 + OUT` summing values from distinct enum types — which C++20 deprecated. The relevant pair-stride constants are now `static constexpr std::size_t` rather than enum members so one operand of every cross-axis sum is a plain integer; the directedness enums remain (they are used as the type of `next_union_element`'s return-pair second element). Sibling kdtree and mRMR remain at C++14 until their own next major releases.
 - **BREAKING**: License changed from GPL-3.0-or-later to BSD 3-Clause. Versions before 2.0.0 remain available under their original GPL-3.0-or-later terms; downstream users who received earlier releases retain their rights under that license. The relicensing aligns vcp with the academic-research convention used by the major scientific-computing libraries (NumPy, SciPy, scikit-learn, pandas) and broadens reuse for industry researchers without copyleft friction. The "no endorsement" clause additionally protects the author's name and affiliated institutions from being used to promote derivative works without permission.

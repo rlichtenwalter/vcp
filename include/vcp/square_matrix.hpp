@@ -26,7 +26,7 @@ namespace vcp {
 template <typename value_type, std::size_t n = 0> class square_matrix {
 public:
   /** @brief Return the side length of the matrix. */
-  constexpr std::size_t size() const noexcept { return n; }
+  [[nodiscard]] constexpr std::size_t size() const noexcept { return n; }
 
   /**
    * @brief Return a mutable reference to the element at (row, column).
@@ -112,7 +112,7 @@ std::ostream &operator<<(std::ostream &os, square_matrix<value_type, 0> const &m
 template <typename value_type> class square_matrix<value_type, 0> {
 public:
   /** @brief Return the side length of the matrix. */
-  std::size_t size() const;
+  [[nodiscard]] std::size_t size() const noexcept;
 
   /**
    * @brief Resize the matrix to @p n × @p n, zero-initializing new elements.
@@ -174,7 +174,9 @@ private:
   std::vector<value_type> data;
 };
 
-template <typename value_type> std::size_t square_matrix<value_type, 0>::size() const { return n_; }
+template <typename value_type> std::size_t square_matrix<value_type, 0>::size() const noexcept {
+  return n_;
+}
 
 template <typename value_type> void square_matrix<value_type, 0>::resize(std::size_t n) {
   n_ = n;
