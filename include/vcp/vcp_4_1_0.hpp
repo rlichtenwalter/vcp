@@ -99,16 +99,20 @@ inline std::size_t vcp<4, 1, false>::element_address(std::size_t subgraph_addres
 
 constexpr std::size_t vcp<4, 1, false>::element_count() noexcept { return num_elements; }
 
-inline vcp<4, 1, false>::vcp(graph const &g)
-    : g(g), unconnected_pairs((g.vertex_count() * (g.vertex_count() - 1) / 2) - g.edge_count()),
+inline vcp<4, 1, false>::vcp(graph const &graph)
+    : g(graph), unconnected_pairs((graph.vertex_count() * (graph.vertex_count() - 1) / 2) -
+                                  graph.edge_count()),
       v3Vertices(std::make_unique<std::pair<const_vertex_iterator, unsigned char>[]>(
-          detail::top_two_neighborhood_size_undirected(g))) {}
+          detail::top_two_neighborhood_size_undirected(graph))) {}
 
 inline std::array<unsigned long, vcp<4, 1, false>::element_count()>
 vcp<4, 1, false>::generate_vector(const_vertex_iterator v1, const_vertex_iterator v2) {
   std::array<unsigned long, element_count()> counts = {{0}};
 
-  std::size_t v1v2(V1V2 * g.edge_exists(v1, v2));
+  // v1v2 is a small bitmask carrying the V1V2 connectivity bit.
+  // unsigned char is wide enough; matches the storage type of
+  // v3Vertices_end->second (the destination for v1v2+V1V3 etc. below).
+  auto const v1v2 = static_cast<unsigned char>(V1V2 * g.edge_exists(v1, v2));
 
   unsigned long connections(0);
   unsigned long gaps(0);
@@ -125,7 +129,7 @@ vcp<4, 1, false>::generate_vector(const_vertex_iterator v1, const_vertex_iterato
         ++connections;
         ++gaps;
         v3Vertices_end->first = g.target_of(v1_neighbors_it);
-        v3Vertices_end->second = v1v2 + V1V3;
+        v3Vertices_end->second = static_cast<unsigned char>(v1v2 + V1V3);
         ++v3Vertices_end;
       }
       ++v1_neighbors_it;
@@ -134,7 +138,7 @@ vcp<4, 1, false>::generate_vector(const_vertex_iterator v1, const_vertex_iterato
         ++connections;
         ++gaps;
         v3Vertices_end->first = g.target_of(v2_neighbors_it);
-        v3Vertices_end->second = v1v2 + V2V3;
+        v3Vertices_end->second = static_cast<unsigned char>(v1v2 + V2V3);
         ++v3Vertices_end;
       }
       ++v2_neighbors_it;
@@ -142,7 +146,7 @@ vcp<4, 1, false>::generate_vector(const_vertex_iterator v1, const_vertex_iterato
              // need to check to exclude it
       connections += 2;
       v3Vertices_end->first = g.target_of(v1_neighbors_it);
-      v3Vertices_end->second = v1v2 + V1V3 + V2V3;
+      v3Vertices_end->second = static_cast<unsigned char>(v1v2 + V1V3 + V2V3);
       ++v3Vertices_end;
       ++v1_neighbors_it;
       ++v2_neighbors_it;
@@ -153,7 +157,7 @@ vcp<4, 1, false>::generate_vector(const_vertex_iterator v1, const_vertex_iterato
       ++connections;
       ++gaps;
       v3Vertices_end->first = g.target_of(v1_neighbors_it);
-      v3Vertices_end->second = v1v2 + V1V3;
+      v3Vertices_end->second = static_cast<unsigned char>(v1v2 + V1V3);
       ++v3Vertices_end;
     }
     ++v1_neighbors_it;
@@ -163,13 +167,13 @@ vcp<4, 1, false>::generate_vector(const_vertex_iterator v1, const_vertex_iterato
       ++connections;
       ++gaps;
       v3Vertices_end->first = g.target_of(v2_neighbors_it);
-      v3Vertices_end->second = v1v2 + V2V3;
+      v3Vertices_end->second = static_cast<unsigned char>(v1v2 + V2V3);
       ++v3Vertices_end;
     }
     ++v2_neighbors_it;
   }
 
-  unsigned long v3_count(v3Vertices_end - v3Vertices_begin);
+  auto v3_count = static_cast<unsigned long>(v3Vertices_end - v3Vertices_begin);
   unsigned long v4_count(0);
   for (std::pair<const_vertex_iterator, unsigned char> *it1(v3Vertices_begin);
        it1 != v3Vertices_end; ++it1) { // for each v3 vertex computed above
@@ -203,14 +207,18 @@ vcp<4, 1, false>::generate_vector(const_vertex_iterator v1, const_vertex_iterato
           // pair; vcp_4_1_1.hpp shifts by 2 because d=1 uses 2 bits per pair.
           // If the connectivity_value enum layout ever changes, replace with
           // the explicit form `V1V4 * ((it2->second - v1v2) / V1V3) + ...`.
-          ++counts[element_address(it1->second + ((it2->second - v1v2) << 1))];
+          // it2->second >= v1v2 by domain (V1V3/V2V3 carry the same V1V2 bit
+          // as v1v2), so the cast to size_t is value-preserving.
+          ++counts[element_address(static_cast<std::size_t>(it1->second) +
+                                   (static_cast<std::size_t>(it2->second - v1v2) << 1))];
         }
       } else { // there is an edge between the v3 vertex and the other v3 vertex serving as a v4
                // vertex
         if (it1->first < it2->first) { // to be a candidate vertex, the other v3 vertex must be
                                        // greater to avoid double counting
           ++connections;
-          ++counts[element_address(it1->second + ((it2->second - v1v2) << 1) + V3V4)];
+          ++counts[element_address(static_cast<std::size_t>(it1->second) +
+                                   (static_cast<std::size_t>(it2->second - v1v2) << 1) + V3V4)];
         }
         ++v3_neighbors_it;
       }
@@ -262,7 +270,7 @@ vcp<4, 1, false>::generate_vector(const_vertex_iterator v1, const_vertex_iterato
         static_cast<long long>(unconnected_pairs) + static_cast<long long>(3 * v4_count);
     long long const negative =
         static_cast<long long>(gaps + !static_cast<bool>(v1v2)) +
-        static_cast<long long>((2 + v3_count) * (V - 2 - static_cast<long long>(v3_count)));
+        (static_cast<long long>(2 + v3_count) * (V - 2 - static_cast<long long>(v3_count)));
     assert(positive >= negative && "unconnected_pairs subtraction chain underflowed");
     assert(positive - negative <= static_cast<long long>(unconnected_pairs) &&
            "unconnected_pairs subtraction chain overshot its upper bound");

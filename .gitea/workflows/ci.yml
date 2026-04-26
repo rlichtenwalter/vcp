@@ -73,13 +73,20 @@ jobs:
 
   lint:
     runs-on: ubuntu-latest
+    # CC/CXX pinned to clang so the generated compile_commands.json does
+    # not include GCC-only flags (-Wlogical-op, -Wduplicated-cond) that
+    # clang-tidy cannot parse — the GCC-gated genexes in
+    # VCP_WARNING_FLAGS evaluate to empty when CXX is clang++.
+    env:
+      CC: clang
+      CXX: clang++
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Boost headers and clang-tidy
+      - name: Install Boost headers, clang, and clang-tidy
         run: |
           sudo apt-get update
-          sudo apt-get install -y libboost-dev
+          sudo apt-get install -y libboost-dev clang
           pip install clang-tidy==20.1.0
 
       - name: Configure (for compile_commands.json)

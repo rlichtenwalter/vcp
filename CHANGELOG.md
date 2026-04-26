@@ -54,6 +54,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   8, and version 8 requires CMake 3.30 — outside our floor.
 
 ### Changed
+- `VCP_WARNING_FLAGS` expanded with `-Wconversion -Wsign-conversion
+  -Wshadow -Wnull-dereference -Wdouble-promotion -Wimplicit-fallthrough`
+  plus GCC-only `-Wlogical-op` and `-Wduplicated-cond`. Each catches a
+  class of bug the existing `-Wall -Wextra -Werror` baseline does not.
+  Mechanical fallout fixed across nine headers — all changes are pure
+  annotations (`static_cast`) or parameter renames; no semantics
+  altered.
+  - **Shadow renames (9 sites):** every `vcp(graph_type const &g) :
+    g(g) {}` constructor renamed its parameter to `graph` to stop
+    shadowing the member `g`. Affects `vcp.hpp` and all eight
+    specialization headers (`vcp_3_1_0.hpp`, `vcp_3_1_1.hpp`,
+    `vcp_3_r_0.hpp`, `vcp_3_r_1.hpp`, `vcp_4_1_0.hpp`, `vcp_4_1_1.hpp`,
+    `vcp_4_r_0.hpp`, `vcp_4_r_1.hpp`). The `vcp_4_r_0` and `vcp_4_r_1`
+    constructors propagate the rename through their bodies.
+  - **Iterator-subtraction sign casts (4 sites):** `graph::vertex_id`,
+    `graph::edge_id`, the equivalents on `directed_graph`,
+    `multirelational_graph<r>`, and `multirelational_directed_graph<r>`
+    now `static_cast<{vertex,edge}_id_t>(...)` the iterator-difference
+    result before returning. The values are non-negative for any valid
+    iterator in the range, so the cast is value-preserving.
+  - **Pointer-subtraction sign casts (5 sites):** `v3_count(...)` in
+    `vcp_4_1_0.hpp`, `vcp_4_1_1.hpp`, `vcp_4_r_0.hpp`, `vcp_4_r_1.hpp`,
+    plus the `vertex_count() - 2 - (...)` site in `vcp_4_r_1.hpp`, now
+    cast the `pair*`-difference result to the destination unsigned
+    type explicitly.
+  - **Domain-narrowing casts in subgraph encoding (vcp_4_1_0.hpp +
+    vcp_4_1_1.hpp):** `v3Vertices_end->second = v1v2 + V1V3 * ...` was
+    a `size_t` -> `unsigned char` (or `unsigned short`) implicit
+    narrowing. The destination width is correct (the bitmask fits
+    trivially); each assignment now `static_cast`s explicitly. The
+    `v1v2` local in `vcp_4_1_0.hpp` is also re-typed from `size_t` to
+    `unsigned char` to match its actual domain. Two `counts[...]`
+    indexing expressions in the same file gain a `static_cast<size_t>`
+    so the signed `int` from arithmetic on `unsigned char` operands
+    does not implicitly promote into the unsigned `size_t` index.
+  - **`std::bit_width` return cast (2 sites):** the
+    `multirelational_*_graph` `relation_count()` helpers now
+    `static_cast<size_t>` the `int` returned by `std::bit_width`. The
+    return is non-negative.
+  - **K4-bidirectional underflow guard (vcp_4_1_0.hpp + vcp_4_1_1.hpp):**
+    the Debug-only assertion on `(2 + v3_count) * (V - 2 - v3_count)`
+    now casts the LHS factor to `long long` instead of casting the
+    whole product, so the multiplication runs in pure signed math.
 - `.gitea/workflows/ci.yml` now invokes presets instead of inline
   `-DCMAKE_BUILD_TYPE=...`/`-DVCP_SANITIZE=ON` flags. The
   `build-and-test` matrix's `build_type: [Release, Debug]` becomes

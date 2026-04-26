@@ -75,7 +75,7 @@ private:
 
 constexpr std::size_t vcp<3, 1, true>::element_count() noexcept { return num_elements; }
 
-inline vcp<3, 1, true>::vcp(directed_graph const &g) : g(g) {}
+inline vcp<3, 1, true>::vcp(directed_graph const &graph) : g(graph) {}
 
 std::pair<const_edge_iterator, vcp<3, 1, true>::directedness_value> inline vcp<
     3, 1, true>::next_union_element(const_edge_iterator &it1, const_edge_iterator end1,

@@ -390,9 +390,9 @@ inline std::size_t vcp<4, 1, true>::element_address(std::size_t subgraph_address
 
 constexpr std::size_t vcp<4, 1, true>::element_count() noexcept { return num_elements; }
 
-inline vcp<4, 1, true>::vcp(directed_graph const &g)
-    : g(g), v3Vertices(std::make_unique<std::pair<const_vertex_iterator, unsigned short>[]>(
-                detail::top_two_neighborhood_size_directed(g))) {
+inline vcp<4, 1, true>::vcp(directed_graph const &graph)
+    : g(graph), v3Vertices(std::make_unique<std::pair<const_vertex_iterator, unsigned short>[]>(
+                    detail::top_two_neighborhood_size_directed(graph))) {
   // compute the total number of somehow-connected pairs in the graph
   for (const_vertex_iterator it(g.vertices_begin()); it != g.vertices_end(); ++it) {
     const_edge_iterator outIt = g.out_neighbors_begin(it);
@@ -418,7 +418,7 @@ inline vcp<4, 1, true>::vcp(directed_graph const &g)
         ++inIt;
       }
     }
-    amutualPairs += (outEnd - outIt) + (inEnd - inIt);
+    amutualPairs += static_cast<unsigned long>((outEnd - outIt) + (inEnd - inIt));
   }
   connectedPairs = amutualPairs + mutualPairs;
   unsigned long potentialConnections =
@@ -487,7 +487,7 @@ vcp<4, 1, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
           ++amutuals;
         }
         v3Vertices_end->first = g.target_of(min1.first);
-        v3Vertices_end->second = v1v2 + V1V3 * min1.second;
+        v3Vertices_end->second = static_cast<unsigned short>(v1v2 + V1V3 * min1.second);
         ++v3Vertices_end;
       }
       min1 = next_union_element(v1_out_neighbors_it, v1_out_neighbors_end, v1_in_neighbors_it,
@@ -500,7 +500,7 @@ vcp<4, 1, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
           ++amutuals;
         }
         v3Vertices_end->first = g.target_of(min2.first);
-        v3Vertices_end->second = v1v2 + V2V3 * min2.second;
+        v3Vertices_end->second = static_cast<unsigned short>(v1v2 + V2V3 * min2.second);
         ++v3Vertices_end;
       }
       min2 = next_union_element(v2_out_neighbors_it, v2_out_neighbors_end, v2_in_neighbors_it,
@@ -515,7 +515,8 @@ vcp<4, 1, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
         ++amutuals;
       }
       v3Vertices_end->first = g.target_of(min1.first);
-      v3Vertices_end->second = v1v2 + V1V3 * min1.second + V2V3 * min2.second;
+      v3Vertices_end->second =
+          static_cast<unsigned short>(v1v2 + V1V3 * min1.second + V2V3 * min2.second);
       ++v3Vertices_end;
       min1 = next_union_element(v1_out_neighbors_it, v1_out_neighbors_end, v1_in_neighbors_it,
                                 v1_in_neighbors_end);
@@ -531,7 +532,7 @@ vcp<4, 1, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
         ++amutuals;
       }
       v3Vertices_end->first = g.target_of(min1.first);
-      v3Vertices_end->second = v1v2 + V1V3 * min1.second;
+      v3Vertices_end->second = static_cast<unsigned short>(v1v2 + V1V3 * min1.second);
       ++v3Vertices_end;
     }
     min1 = next_union_element(v1_out_neighbors_it, v1_out_neighbors_end, v1_in_neighbors_it,
@@ -545,14 +546,14 @@ vcp<4, 1, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
         ++amutuals;
       }
       v3Vertices_end->first = g.target_of(min2.first);
-      v3Vertices_end->second = v1v2 + V2V3 * min2.second;
+      v3Vertices_end->second = static_cast<unsigned short>(v1v2 + V2V3 * min2.second);
       ++v3Vertices_end;
     }
     min2 = next_union_element(v2_out_neighbors_it, v2_out_neighbors_end, v2_in_neighbors_it,
                               v2_in_neighbors_end);
   }
 
-  unsigned long v3_count(v3Vertices_end - v3Vertices_begin);
+  auto v3_count = static_cast<unsigned long>(v3Vertices_end - v3Vertices_begin);
   unsigned long v4_count(0);
   for (std::pair<const_vertex_iterator, unsigned short> *it1(v3Vertices_begin);
        it1 != v3Vertices_end; ++it1) { // for each v3 vertex computed above
@@ -649,7 +650,7 @@ vcp<4, 1, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
         static_cast<long long>(unconnected_pairs) + static_cast<long long>(3 * v4_count);
     long long const negative =
         static_cast<long long>(gaps + !static_cast<bool>(v1v2)) +
-        static_cast<long long>((2 + v3_count) * (V - 2 - static_cast<long long>(v3_count)));
+        (static_cast<long long>(2 + v3_count) * (V - 2 - static_cast<long long>(v3_count)));
     assert(positive >= negative && "unconnected_pairs subtraction chain underflowed");
     assert(positive - negative <= static_cast<long long>(unconnected_pairs) &&
            "unconnected_pairs subtraction chain overshot its upper bound");

@@ -155,7 +155,7 @@ edge_value(multirelational_directed_graph<r> const &g, const_edge_iterator edge)
 
 template <std::size_t n, std::size_t r, bool d>
   requires(n >= 2 && r >= 1)
-vcp<n, r, d>::vcp(graph_type const &g) : g(g) {}
+vcp<n, r, d>::vcp(graph_type const &graph) : g(graph) {}
 
 template <std::size_t n, std::size_t r, bool d>
   requires(n >= 2 && r >= 1)
