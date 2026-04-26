@@ -33,10 +33,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Boost headers and Clang
+      - name: Install Boost headers, Clang, and lld
         run: |
           sudo apt-get update
-          sudo apt-get install -y libboost-dev clang
+          sudo apt-get install -y libboost-dev clang lld
 
       - name: Configure
         run: cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
