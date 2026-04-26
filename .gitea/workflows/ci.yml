@@ -27,6 +27,9 @@ jobs:
           - compiler: clang
             cc: clang
             cxx: clang++
+    env:
+      CC: ${{ matrix.cc }}
+      CXX: ${{ matrix.cxx }}
     steps:
       - uses: actions/checkout@v4
 
@@ -36,9 +39,6 @@ jobs:
           sudo apt-get install -y libboost-dev clang
 
       - name: Configure
-        env:
-          CC: ${{ matrix.cc }}
-          CXX: ${{ matrix.cxx }}
         run: cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
 
       - name: Build

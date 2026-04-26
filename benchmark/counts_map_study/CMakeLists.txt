@@ -10,6 +10,8 @@ if(VCP_BUILD_COUNTS_BENCH)
     target_link_libraries(bench_counts_containers
         PRIVATE vcp::vcp Catch2::Catch2WithMain)
     target_compile_definitions(bench_counts_containers PRIVATE NDEBUG)
+    # Opt-in dev harness: -Wall -Wextra -pedantic without -Werror so a future
+    # compiler warning does not break a reproducible study artifact.
     target_compile_options(bench_counts_containers PRIVATE
-        -O3 ${VCP_WARNING_FLAGS})
+        -O3 -Wall -Wextra -pedantic)
 endif()
