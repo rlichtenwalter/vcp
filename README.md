@@ -59,13 +59,6 @@ build options):
 cmake -B build --fresh
 ```
 
-The `MAX_NEIGHBORS` compile-time cap (default: 16384) can be adjusted at
-configure time:
-
-```bash
-cmake -B build -DVCP_MAX_NEIGHBORS=32768
-```
-
 ## Testing
 
 ```bash

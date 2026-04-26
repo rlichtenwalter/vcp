@@ -151,13 +151,13 @@ inline bool edge_value(directed_graph const &g, const_edge_iterator edge) {
   return g.edge_exists(edge);
 }
 
-template <typename std::size_t r>
+template <std::size_t r>
 typename multirelational_graph<r>::connectivity_address_type
 edge_value(multirelational_graph<r> const &g, const_edge_iterator edge) {
   return g.edge_value(edge);
 }
 
-template <typename std::size_t r>
+template <std::size_t r>
 typename multirelational_graph<r>::connectivity_address_type
 edge_value(multirelational_directed_graph<r> const &g, const_edge_iterator edge) {
   return g.edge_value(edge);

@@ -48,7 +48,7 @@ unsigned long expected_pair_sum(std::size_t vertex_count) {
 void check_pair(vcp::vcp<4, 1, false> &v, vcp::graph const &g, std::size_t a, std::size_t b) {
   auto const counts = v.generate_vector(vertex_at(g, a), vertex_at(g, b));
   unsigned long const total = std::accumulate(counts.begin(), counts.end(), 0UL);
-  unsigned long const peak = *std::max_element(counts.begin(), counts.end());
+  unsigned long const peak = *std::ranges::max_element(counts);
   unsigned long const expected = expected_pair_sum(g.vertex_count());
   REQUIRE(total == expected);
   REQUIRE(peak <= expected);
@@ -161,7 +161,7 @@ TEST_CASE("vcp<4,1,false> single-bucket concentration on K5", "[vcp_4_1_0]") {
   auto const nonzero = static_cast<unsigned long>(
       std::count_if(counts.begin(), counts.end(), [](unsigned long c) { return c != 0; }));
   REQUIRE(nonzero == 1);
-  unsigned long const peak = *std::max_element(counts.begin(), counts.end());
+  unsigned long const peak = *std::ranges::max_element(counts);
   REQUIRE(peak == 3);
 }
 
@@ -175,6 +175,6 @@ TEST_CASE("vcp<4,1,false> locates the single non-zero bucket for V=4", "[vcp_4_1
   auto const nonzero = static_cast<unsigned long>(
       std::count_if(counts.begin(), counts.end(), [](unsigned long c) { return c != 0; }));
   REQUIRE(nonzero == 1);
-  unsigned long const peak = *std::max_element(counts.begin(), counts.end());
+  unsigned long const peak = *std::ranges::max_element(counts);
   REQUIRE(peak == 1);
 }

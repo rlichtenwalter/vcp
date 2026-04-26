@@ -34,7 +34,8 @@
 namespace k_probe {
 
 // 64 buckets covers k in [0, 2^63]. In practice the interesting range is
-// [0, 2^14] for our workloads (MAX_NEIGHBORS is 16384).
+// [0, 2^14] for our workloads (the historical compile-time MAX_NEIGHBORS
+// was 16384; v3Vertices is now sized to top1+top2 unique-neighbor count).
 inline constexpr std::size_t BUCKETS = 64;
 
 struct Histogram {

@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <memory>
 #include <utility>
+#include <vcp/detail/v3_buffer_bound.hpp>
 #include <vcp/graph.hpp>
 
 namespace vcp {
@@ -98,8 +99,8 @@ constexpr std::size_t vcp<4, 1, false>::element_count() { return num_elements; }
 
 inline vcp<4, 1, false>::vcp(graph const &g)
     : g(g), unconnected_pairs((g.vertex_count() * (g.vertex_count() - 1) / 2) - g.edge_count()),
-      v3Vertices(
-          std::make_unique<std::pair<const_vertex_iterator, unsigned char>[]>(MAX_NEIGHBORS)) {}
+      v3Vertices(std::make_unique<std::pair<const_vertex_iterator, unsigned char>[]>(
+          detail::top_two_neighborhood_size_undirected(g))) {}
 
 std::array<unsigned long, vcp<4, 1, false>::element_count()> const inline vcp<
     4, 1, false>::generate_vector(const_vertex_iterator v1, const_vertex_iterator v2) {
@@ -114,13 +115,6 @@ std::array<unsigned long, vcp<4, 1, false>::element_count()> const inline vcp<
   const_edge_iterator v1_neighbors_end(g.neighbors_end(v1));
   const_edge_iterator v2_neighbors_it(g.neighbors_begin(v2));
   const_edge_iterator v2_neighbors_end(g.neighbors_end(v2));
-  assert(MAX_NEIGHBORS >
-         (v1_neighbors_end - v1_neighbors_it) +
-             (v2_neighbors_end -
-              v2_neighbors_it)); // this should always be contiguous storage; we can only
-                                 // over-allocate by a factor of 2, which is of much lower cost than
-                                 // maintaining a doubly-linked list; there exists a strict upper
-                                 // bound on the final size of v3Vertices
   std::pair<const_vertex_iterator, unsigned char> *v3Vertices_begin(&v3Vertices[0]);
   std::pair<const_vertex_iterator, unsigned char> *v3Vertices_end(&v3Vertices[0]);
   while (v1_neighbors_it != v1_neighbors_end && v2_neighbors_it != v2_neighbors_end) {

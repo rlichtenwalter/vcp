@@ -5,7 +5,6 @@
 #define VCP_SQUARE_MATRIX_HPP
 
 #include <array>
-#include <cmath>
 #include <cstddef>
 #include <ostream>
 #include <vector>
@@ -27,7 +26,7 @@ namespace vcp {
 template <typename value_type, std::size_t n = 0> class square_matrix {
 public:
   /** @brief Return the side length of the matrix. */
-  std::size_t size() const;
+  constexpr std::size_t size() const noexcept { return n; }
 
   /**
    * @brief Return a mutable reference to the element at (row, column).
@@ -68,11 +67,6 @@ private:
  */
 template <typename value_type, size_t n>
 std::ostream &operator<<(std::ostream &os, square_matrix<value_type, n> const &matrix);
-
-template <typename value_type, std::size_t n>
-std::size_t square_matrix<value_type, n>::size() const {
-  return std::sqrt(data.size());
-}
 
 template <typename value_type, std::size_t n>
 value_type &square_matrix<value_type, n>::operator()(std::size_t row, std::size_t column) {
@@ -176,32 +170,33 @@ public:
   value_type const &operator()(std::size_t row, std::size_t column) const;
 
 private:
+  std::size_t n_{0};
   std::vector<value_type> data;
 };
 
-template <typename value_type> std::size_t square_matrix<value_type, 0>::size() const {
-  return std::sqrt(data.size());
-}
+template <typename value_type> std::size_t square_matrix<value_type, 0>::size() const { return n_; }
 
 template <typename value_type> void square_matrix<value_type, 0>::resize(std::size_t n) {
+  n_ = n;
   data.resize(n * n);
 }
 
 template <typename value_type>
-square_matrix<value_type, 0>::square_matrix(std::size_t n) : data(n * n, 0) {}
+square_matrix<value_type, 0>::square_matrix(std::size_t n) : n_(n), data(n * n, 0) {}
 
 template <typename value_type>
-template <typename std::size_t n>
+template <std::size_t n>
 square_matrix<value_type, 0>::square_matrix(square_matrix<value_type, n> const &matrix)
-    : data(n * n) {
+    : n_(n), data(n * n) {
   std::copy(&matrix(0, 0), &matrix(0, 0) + n * n, &data[0]);
 }
 
 template <typename value_type>
-template <typename std::size_t n>
+template <std::size_t n>
 square_matrix<value_type, 0> &
 square_matrix<value_type, 0>::operator=(square_matrix<value_type, n> const &matrix) {
   if (static_cast<void const *>(this) != static_cast<void const *>(&matrix)) {
+    n_ = n;
     data.resize(n * n);
     std::copy(&matrix(0, 0), &matrix(0, 0) + n * n, &data[0]);
   }
