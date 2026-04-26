@@ -104,52 +104,55 @@ private:
 };
 
 template <std::size_t r>
-vcp<4, r, true>::vcp(multirelational_directed_graph<r> const &g)
-    : g(g), mapper(),
+vcp<4, r, true>::vcp(multirelational_directed_graph<r> const &graph)
+    : g(graph), mapper(),
       v3Vertices(std::make_unique<std::pair<const_vertex_iterator, connectivity_matrix>[]>(
-          detail::top_two_neighborhood_size_directed(g))) {
+          detail::top_two_neighborhood_size_directed(graph))) {
   // (0, 0) is the unconnected class — seed its count with the number
   // of unordered pairs and decrement per real edge, same pattern as
   // vcp_4_r_0's undirected ctor.
   unsigned long &gaps(edge_types.insert_or_zero(
       std::pair{connectivity_address_type(0), connectivity_address_type(0)}));
-  gaps = g.vertex_count() * (g.vertex_count() - 1) / 2;
-  for (const_vertex_iterator it(g.vertices_begin()); it != g.vertices_end(); ++it) {
-    const_edge_iterator outIt = g.out_neighbors_begin(it);
-    const_edge_iterator outEnd = g.out_neighbors_end(it);
-    const_edge_iterator inIt = g.in_neighbors_begin(it);
-    const_edge_iterator inEnd = g.in_neighbors_end(it);
-    while (outIt != outEnd && g.target_of(outIt) <= it) {
+  gaps = graph.vertex_count() * (graph.vertex_count() - 1) / 2;
+  for (const_vertex_iterator it(graph.vertices_begin()); it != graph.vertices_end(); ++it) {
+    const_edge_iterator outIt = graph.out_neighbors_begin(it);
+    const_edge_iterator outEnd = graph.out_neighbors_end(it);
+    const_edge_iterator inIt = graph.in_neighbors_begin(it);
+    const_edge_iterator inEnd = graph.in_neighbors_end(it);
+    while (outIt != outEnd && graph.target_of(outIt) <= it) {
       ++outIt;
     }
-    while (inIt != inEnd && g.target_of(inIt) <= it) {
+    while (inIt != inEnd && graph.target_of(inIt) <= it) {
       ++inIt;
     }
     while (outIt != outEnd && inIt != inEnd) {
-      if (g.target_of(outIt) < g.target_of(inIt)) {
-        ++edge_types.insert_or_zero(std::pair{connectivity_address_type(0), g.edge_value(outIt)});
+      if (graph.target_of(outIt) < graph.target_of(inIt)) {
+        ++edge_types.insert_or_zero(
+            std::pair{connectivity_address_type(0), graph.edge_value(outIt)});
         --gaps;
         ++outIt;
-      } else if (g.target_of(outIt) > g.target_of(inIt)) {
-        ++edge_types.insert_or_zero(std::pair{connectivity_address_type(0), g.edge_value(inIt)});
+      } else if (graph.target_of(outIt) > graph.target_of(inIt)) {
+        ++edge_types.insert_or_zero(
+            std::pair{connectivity_address_type(0), graph.edge_value(inIt)});
         --gaps;
         ++inIt;
       } else {
-        ++edge_types.insert_or_zero(g.edge_value(outIt) < g.edge_value(inIt)
-                                        ? std::pair{g.edge_value(outIt), g.edge_value(inIt)}
-                                        : std::pair{g.edge_value(inIt), g.edge_value(outIt)});
+        ++edge_types.insert_or_zero(
+            graph.edge_value(outIt) < graph.edge_value(inIt)
+                ? std::pair{graph.edge_value(outIt), graph.edge_value(inIt)}
+                : std::pair{graph.edge_value(inIt), graph.edge_value(outIt)});
         --gaps;
         ++outIt;
         ++inIt;
       }
     }
     while (outIt != outEnd) {
-      ++edge_types.insert_or_zero(std::pair{connectivity_address_type(0), g.edge_value(outIt)});
+      ++edge_types.insert_or_zero(std::pair{connectivity_address_type(0), graph.edge_value(outIt)});
       --gaps;
       ++outIt;
     }
     while (inIt != inEnd) {
-      ++edge_types.insert_or_zero(std::pair{connectivity_address_type(0), g.edge_value(inIt)});
+      ++edge_types.insert_or_zero(std::pair{connectivity_address_type(0), graph.edge_value(inIt)});
       --gaps;
       ++inIt;
     }
@@ -312,7 +315,7 @@ vcp<4, r, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
                               v2_in_neighbors_end);
   }
 
-  std::size_t v3_count(v3Vertices_end - v3Vertices_begin);
+  std::size_t v3_count(static_cast<std::size_t>(v3Vertices_end - v3Vertices_begin));
   std::size_t v4_count(0);
   for (std::pair<const_vertex_iterator, connectivity_matrix> *it1(v3Vertices_begin);
        it1 != v3Vertices_end; ++it1) { // for each v3 vertex computed above
@@ -403,7 +406,8 @@ vcp<4, r, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
     it1->second(2, 3) = 0;
     it1->second(3, 2) = 0;
     counts.insert(std::pair{mapper.canonical_subgraph_address(it1->second), 0}).first->second +=
-        g.vertex_count() - 2 - ((v3Vertices_end - v3Vertices_begin) + v4_local_count);
+        g.vertex_count() - 2 -
+        (static_cast<unsigned long>(v3Vertices_end - v3Vertices_begin) + v4_local_count);
   }
 
   // v1v2's own directionality class, sorted (lo, hi) to match edge_types keys.

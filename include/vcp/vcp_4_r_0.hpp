@@ -111,20 +111,21 @@ private:
 };
 
 template <std::size_t r>
-vcp<4, r, false>::vcp(multirelational_graph<r> const &g)
-    : g(g), mapper(),
+vcp<4, r, false>::vcp(multirelational_graph<r> const &graph)
+    : g(graph), mapper(),
       v3Vertices(std::make_unique<std::pair<const_vertex_iterator, connectivity_matrix>[]>(
-          detail::top_two_neighborhood_size_undirected(g))) {
+          detail::top_two_neighborhood_size_undirected(graph))) {
   // Edge-type key 0 is the "no relation" class — initialize its count
   // to the number of unordered pairs, then decrement as real edges
   // are added below. Each real edge shifts one pair out of the
   // unconnected class into its actual relation class.
   unsigned long &gaps(edge_types.insert_or_zero(0));
-  gaps = g.vertex_count() * (g.vertex_count() - 1) / 2;
-  for (const_vertex_iterator it(g.vertices_begin()); it != g.vertices_end(); ++it) {
-    for (const_edge_iterator eIt(g.neighbors_begin(it)); eIt != g.neighbors_end(it); ++eIt) {
-      if (it < g.target_of(eIt)) {
-        ++edge_types.insert_or_zero(g.edge_value(eIt));
+  gaps = graph.vertex_count() * (graph.vertex_count() - 1) / 2;
+  for (const_vertex_iterator it(graph.vertices_begin()); it != graph.vertices_end(); ++it) {
+    for (const_edge_iterator eIt(graph.neighbors_begin(it)); eIt != graph.neighbors_end(it);
+         ++eIt) {
+      if (it < graph.target_of(eIt)) {
+        ++edge_types.insert_or_zero(graph.edge_value(eIt));
         --gaps;
       }
     }
@@ -208,7 +209,7 @@ vcp<4, r, false>::generate_vector(const_vertex_iterator v1, const_vertex_iterato
     ++v2_neighbors_it;
   }
 
-  std::size_t v3_count(v3Vertices_end - v3Vertices_begin);
+  std::size_t v3_count(static_cast<std::size_t>(v3Vertices_end - v3Vertices_begin));
   std::size_t v4_count(0);
   for (std::pair<const_vertex_iterator, connectivity_matrix> *it1(v3Vertices_begin);
        it1 != v3Vertices_end; ++it1) { // for each v3 vertex computed above

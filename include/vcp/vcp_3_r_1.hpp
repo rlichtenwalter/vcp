@@ -93,7 +93,7 @@ private:
                      const_edge_iterator end2) const;
 };
 
-template <std::size_t r> vcp<3, r, true>::vcp(graph_type const &g) : g(g) {}
+template <std::size_t r> vcp<3, r, true>::vcp(graph_type const &graph) : g(graph) {}
 
 template <std::size_t r>
 std::pair<const_edge_iterator, std::pair<typename vcp<3, r, true>::connectivity_address_type,

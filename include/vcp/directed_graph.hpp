@@ -313,7 +313,10 @@ directed_graph::in_neighbors_end(const_vertex_iterator it) const noexcept {
 }
 
 inline vertex_id_t directed_graph::vertex_id(const_vertex_iterator it) const noexcept {
-  return it - static_cast<const_vertex_iterator>(vertices.get());
+  // Iterator subtraction yields a signed difference_type; the result is
+  // non-negative for any valid `it` in [vertices_begin, vertices_end), so
+  // the cast to the unsigned vertex_id_t is value-preserving.
+  return static_cast<vertex_id_t>(it - static_cast<const_vertex_iterator>(vertices.get()));
 }
 
 inline const_vertex_iterator directed_graph::target_of(const_edge_iterator it) const noexcept {
@@ -321,7 +324,8 @@ inline const_vertex_iterator directed_graph::target_of(const_edge_iterator it) c
 }
 
 inline edge_id_t directed_graph::edge_id(const_edge_iterator it) const noexcept {
-  return it - static_cast<const_edge_iterator>(edges.get());
+  // See vertex_id() comment above re: signed-to-unsigned cast.
+  return static_cast<edge_id_t>(it - static_cast<const_edge_iterator>(edges.get()));
 }
 
 inline bool directed_graph::edge_exists(const_edge_iterator it) const noexcept {

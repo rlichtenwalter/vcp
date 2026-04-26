@@ -65,7 +65,7 @@ private:
   graph const &g;
 };
 
-inline vcp<3, 1, false>::vcp(graph const &g) : g(g) {}
+inline vcp<3, 1, false>::vcp(graph const &graph) : g(graph) {}
 
 constexpr std::size_t vcp<3, 1, false>::element_count() noexcept { return num_elements; }
 
