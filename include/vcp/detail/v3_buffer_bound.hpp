@@ -5,7 +5,6 @@
 #define VCP_DETAIL_V3_BUFFER_BOUND_HPP
 
 #include <cstddef>
-#include <vcp/graph.hpp>
 
 namespace vcp::detail {
 
@@ -29,7 +28,7 @@ template <class UndirectedGraph>
 std::size_t top_two_neighborhood_size_undirected(UndirectedGraph const &g) {
   std::size_t top1 = 0;
   std::size_t top2 = 0;
-  for (const_vertex_iterator it(g.vertices_begin()); it != g.vertices_end(); ++it) {
+  for (auto it = g.vertices_begin(); it != g.vertices_end(); ++it) {
     auto const deg = static_cast<std::size_t>(g.neighbors_end(it) - g.neighbors_begin(it));
     if (deg >= top1) {
       top2 = top1;
@@ -68,7 +67,7 @@ template <class DirectedGraph>
 std::size_t top_two_neighborhood_size_directed(DirectedGraph const &g) {
   std::size_t top1 = 0;
   std::size_t top2 = 0;
-  for (const_vertex_iterator it(g.vertices_begin()); it != g.vertices_end(); ++it) {
+  for (auto it = g.vertices_begin(); it != g.vertices_end(); ++it) {
     auto const outBegin = g.out_neighbors_begin(it);
     auto const outEnd = g.out_neighbors_end(it);
     auto const inBegin = g.in_neighbors_begin(it);
