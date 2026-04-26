@@ -40,6 +40,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `CITATION.cff` at the repository root for academic citation metadata. Preferred citation is the open-access 2014 SpringerPlus paper; the 2012 WWW conference paper is included under references. Gitea and GitHub render a "Cite this repository" affordance from this file.
 
 ### Changed
+- CI `build-and-test` job extended with a Clang matrix entry; both GCC and Clang now build
+  the library, tools, tests, and run the full ctest suite at Release and Debug. The library
+  is header-only and implicitly promised Clang compatibility; the matrix makes that
+  promise enforceable on every PR. Matrix is `{compiler: gcc, clang} × {build_type: Release, Debug}`
+  with `fail-fast: false` so a failure in one configuration does not mask others.
+- Test and benchmark targets now compile with the same warning flags as the CLI tools
+  (`-Wall -Wextra -Werror -pedantic -Wno-unused-local-typedefs`), via a new shared
+  `VCP_WARNING_FLAGS` CMake variable. Previously `vcp_add_catch_test` passed only
+  `${VCP_SANITIZE_FLAGS}` and the benchmark targets duplicated their own flag list,
+  so warnings the tools would error on could slide through test or benchmark code
+  silently. Adding a flag to `VCP_WARNING_FLAGS` now lands in every consumer build at once.
 - `std::make_pair(...)` replaced with `std::pair{...}` braced-initializer / CTAD form
   throughout the headers, tools, and tests (~50 call sites across nine files). The C++17
   CTAD-equivalent form drops the helper-template indirection and matches modern guidance

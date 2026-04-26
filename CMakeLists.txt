@@ -81,6 +81,19 @@ set(VCP_TOOLS
     vcp_gen_er_fixture
 )
 
+# --- Warning flags ---
+# Shared baseline applied to every target that consumes the library
+# (tools, tests, benchmarks). Centralized so that a flag added here lands
+# in every consumer build at once and the test/benchmark targets cannot
+# silently slide past warnings the tools would error on.
+#
+# -Wno-unused-local-typedefs suppresses noise from CRTP/SFINAE-style
+# helpers in the public headers. Removing it surfaces hundreds of
+# warnings across template instantiations that have no actionable fix.
+set(VCP_WARNING_FLAGS
+    -Wall -Wextra -Werror -pedantic -Wno-unused-local-typedefs
+)
+
 foreach(tool IN LISTS VCP_TOOLS)
     add_executable(${tool} tools/${tool}.cpp)
     target_link_libraries(${tool} PRIVATE vcp::vcp CLI11::CLI11)
@@ -88,7 +101,7 @@ foreach(tool IN LISTS VCP_TOOLS)
         VCP_VERSION="${PROJECT_VERSION}"
     )
     target_compile_options(${tool} PRIVATE
-        -Wall -Wextra -Werror -pedantic -Wno-unused-local-typedefs
+        ${VCP_WARNING_FLAGS}
         $<$<CONFIG:Release>:-O3 -flto -fomit-frame-pointer -DNDEBUG>
         $<$<CONFIG:Debug>:-Og -g -fno-omit-frame-pointer>
     )

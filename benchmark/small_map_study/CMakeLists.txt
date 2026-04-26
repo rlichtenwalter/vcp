@@ -16,10 +16,10 @@ if(VCP_BUILD_K_PROBE)
     target_include_directories(k_probe_tool PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
     )
-    target_compile_options(k_probe_tool PRIVATE -O3 -Wall -Wextra -pedantic)
+    target_compile_options(k_probe_tool PRIVATE -O3 ${VCP_WARNING_FLAGS})
 
     add_executable(bench_container_mix bench_container_mix.cpp)
     target_link_libraries(bench_container_mix PRIVATE vcp::vcp Catch2::Catch2WithMain)
     target_compile_definitions(bench_container_mix PRIVATE NDEBUG)
-    target_compile_options(bench_container_mix PRIVATE -O3 -Wall -Wextra -pedantic)
+    target_compile_options(bench_container_mix PRIVATE -O3 ${VCP_WARNING_FLAGS})
 endif()

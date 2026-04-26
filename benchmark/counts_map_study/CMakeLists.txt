@@ -11,5 +11,5 @@ if(VCP_BUILD_COUNTS_BENCH)
         PRIVATE vcp::vcp Catch2::Catch2WithMain)
     target_compile_definitions(bench_counts_containers PRIVATE NDEBUG)
     target_compile_options(bench_counts_containers PRIVATE
-        -O3 -Wall -Wextra -pedantic)
+        -O3 ${VCP_WARNING_FLAGS})
 endif()
