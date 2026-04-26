@@ -13,10 +13,6 @@
 #include <vcp/square_matrix.hpp>
 #include <vcp/vcp_dynamic_mapper.hpp>
 
-#ifdef VCP_INSTRUMENT_K
-#include <k_probe.hpp>
-#endif
-
 namespace vcp {
 
 template <std::size_t n, std::size_t r, bool d>
@@ -439,12 +435,6 @@ vcp<4, r, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
     counts.insert(std::pair{mapper.canonical_subgraph_address(connectivity), 0}).first->second +=
         count;
   });
-
-#ifdef VCP_INSTRUMENT_K
-  k_probe::record("temp_edge_types", temp_edge_types.size());
-  k_probe::record("edge_types", edge_types.size());
-  k_probe::record("counts", counts.size());
-#endif
 
   return counts;
 }

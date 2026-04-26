@@ -1,25 +1,12 @@
-# Small-map study instrumentation harness. Built only when both
-# `VCP_BUILD_BENCHMARKS=ON` AND `VCP_BUILD_K_PROBE=ON` are set. The study
-# is a one-time investigation that motivated `detail::dense_or_sparse_map`;
-# its artifacts are not shipped with the library.
+# Small-map study microbenchmark. Built only when both
+# `VCP_BUILD_BENCHMARKS=ON` AND `VCP_BUILD_SMALL_MAP_STUDY=ON` are set.
+# The study is a one-time investigation that motivated
+# `detail::dense_or_sparse_map`; its artifacts are not shipped with the
+# library. Recorded results live under `results/`.
 
-option(VCP_BUILD_K_PROBE "Build the k-probe study harness" OFF)
+option(VCP_BUILD_SMALL_MAP_STUDY "Build the small-map study microbenchmark" OFF)
 
-if(VCP_BUILD_K_PROBE)
-    add_executable(k_probe_tool k_probe_tool.cpp)
-    target_link_libraries(k_probe_tool PRIVATE vcp::vcp CLI11::CLI11)
-    target_compile_definitions(k_probe_tool PRIVATE
-        VCP_INSTRUMENT_K
-        VCP_VERSION="${PROJECT_VERSION}"
-        NDEBUG
-    )
-    target_include_directories(k_probe_tool PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}
-    )
-    # Opt-in dev harness: -Wall -Wextra -pedantic without -Werror so a future
-    # compiler warning does not break a reproducible study artifact.
-    target_compile_options(k_probe_tool PRIVATE -O3 -Wall -Wextra -pedantic)
-
+if(VCP_BUILD_SMALL_MAP_STUDY)
     add_executable(bench_container_mix bench_container_mix.cpp)
     target_link_libraries(bench_container_mix PRIVATE vcp::vcp Catch2::Catch2WithMain)
     target_compile_definitions(bench_container_mix PRIVATE NDEBUG)
