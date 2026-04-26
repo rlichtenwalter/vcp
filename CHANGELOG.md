@@ -38,8 +38,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - CLI `--version` output for each tool, sourced from VERSION via CMake
 
 - `CITATION.cff` at the repository root for academic citation metadata. Preferred citation is the open-access 2014 SpringerPlus paper; the 2012 WWW conference paper is included under references. Gitea and GitHub render a "Cite this repository" affordance from this file.
+- `CMakePresets.json` at the repository root with three named configurations
+  (`release`, `debug`, `sanitize`) covering the three meaningful build contexts
+  the project ships. Each preset has its own `binaryDir` under `build/<name>`,
+  so switching between configs no longer triggers a full rebuild — each tree
+  keeps its own warm cache. Build presets and test presets mirror the
+  configure presets one-for-one, and the `sanitize` test preset carries
+  the `ASAN_OPTIONS` / `UBSAN_OPTIONS` halt-on-error contract that was
+  previously duplicated inline in CI yaml. The preset file is at version
+  `3` (CMake 3.21+, comfortably below our 3.24 floor) and explicitly
+  declares `cmakeMinimumRequired: 3.24` so editors and tooling refuse
+  older toolchains. IDEs that support presets (VSCode CMake Tools,
+  CLion, KDevelop, Qt Creator) read the file directly. Schema string
+  intentionally omitted: CMake errors on `$schema` below preset version
+  8, and version 8 requires CMake 3.30 — outside our floor.
 
 ### Changed
+- `.gitea/workflows/ci.yml` now invokes presets instead of inline
+  `-DCMAKE_BUILD_TYPE=...`/`-DVCP_SANITIZE=ON` flags. The
+  `build-and-test` matrix's `build_type: [Release, Debug]` becomes
+  `preset: [release, debug]`, the `lint` job uses `cmake --preset=release`
+  and `clang-tidy -p build/release`, and the `sanitize` job uses
+  `cmake --preset=sanitize` with `ctest --preset=sanitize` (sanitizer
+  runtime options now live on the test preset, not the workflow yaml).
+  The CI reproduces a developer's local `cmake --preset=...` invocation
+  byte-for-byte; failures are reproducible by name without
+  copy-pasting the matrix expansion.
+- `.gitignore` simplified: the `build-*/` glob is removed in favor of
+  the existing `build/` rule, since presets place all per-config trees
+  under `build/<name>/` (a subdirectory of the already-ignored root).
 - CI `build-and-test` job extended with a Clang matrix entry; both GCC and Clang now build
   the library, tools, tests, and run the full ctest suite at Release and Debug. The library
   is header-only and implicitly promised Clang compatibility; the matrix makes that
