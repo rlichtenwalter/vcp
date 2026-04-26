@@ -433,23 +433,23 @@ std::pair<const_edge_iterator, typename vcp<4, 1, true>::directedness_value> inl
     const { // out-neighbor iterators should always come first
   if (it1 != end1 && it2 != end2) {
     if (g.target_of(it1) < g.target_of(it2)) {
-      return std::make_pair(it1++, OUT);
+      return std::pair{it1++, OUT};
     } else if (g.target_of(it1) > g.target_of(it2)) {
-      return std::make_pair(it2++, IN);
+      return std::pair{it2++, IN};
     } else {
       ++it2;
-      return std::make_pair(it1++, BOTH);
+      return std::pair{it1++, BOTH};
     }
   } else if (it1 != end1) {
-    return std::make_pair(it1++, OUT);
+    return std::pair{it1++, OUT};
   } else if (it2 != end2) {
-    return std::make_pair(it2++, IN);
+    return std::pair{it2++, IN};
   } else {
     // Both input iterator pairs exhausted. Signal exhaustion via the EMPTY
     // directedness sentinel; callers test `min.second == EMPTY` rather than
     // coincidentally comparing `min.first` to end2. The returned iterator
     // value is unused — callers must not dereference it.
-    return std::make_pair(end2, EMPTY);
+    return std::pair{end2, EMPTY};
   }
 }
 

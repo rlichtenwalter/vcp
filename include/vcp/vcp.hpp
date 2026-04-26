@@ -114,24 +114,6 @@ private:
               std::map<subgraph_address_type, unsigned long> &counts);
 };
 
-const_edge_iterator edge(graph const &g, const_vertex_iterator v1, const_vertex_iterator v2);
-const_edge_iterator edge(directed_graph const &g, const_vertex_iterator v1,
-                         const_vertex_iterator v2);
-template <std::size_t r>
-const_edge_iterator edge(multirelational_graph<r> const &g, const_vertex_iterator v1,
-                         const_vertex_iterator v2);
-template <std::size_t r>
-const_edge_iterator edge(multirelational_directed_graph<r> const &g, const_vertex_iterator v1,
-                         const_vertex_iterator v2);
-bool edge_value(graph const &g, const_edge_iterator edge);
-bool edge_value(directed_graph const &g, const_edge_iterator edge);
-template <std::size_t r>
-typename multirelational_graph<r>::connectivity_address_type
-edge_value(multirelational_graph<r> const &g, const_edge_iterator edge);
-template <std::size_t r>
-typename multirelational_graph<r>::connectivity_address_type
-edge_value(multirelational_directed_graph<r> const &g, const_edge_iterator edge);
-
 inline const_edge_iterator edge(graph const &g, const_vertex_iterator v1,
                                 const_vertex_iterator v2) {
   return g.edge(v1, v2);
@@ -192,8 +174,7 @@ void vcp<n, r, d>::helper(std::array<const_vertex_iterator, n> &vertices, std::s
     }
   }
   if (n == current_index + 1) {
-    ++counts.insert(std::make_pair(mapper.canonical_subgraph_address(connectivity), 0))
-          .first->second;
+    ++counts.insert(std::pair{mapper.canonical_subgraph_address(connectivity), 0}).first->second;
   } else {
     for (const_vertex_iterator v(vertices[current_index] + 1); v != g.vertices_end(); ++v) {
       vertices[current_index + 1] = v;

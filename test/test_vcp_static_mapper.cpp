@@ -136,7 +136,7 @@ TEST_CASE(
         ++slot;
       }
     }
-    return std::make_pair(conn_s, conn_d);
+    return std::pair{conn_s, conn_d};
   };
 
   for (std::size_t s1(0); s1 < 64; ++s1) {

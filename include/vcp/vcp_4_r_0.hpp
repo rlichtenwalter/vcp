@@ -228,7 +228,7 @@ vcp<4, r, false>::generate_vector(const_vertex_iterator v1, const_vertex_iterato
           it1->second(0, 3) = 0;
           it1->second(1, 3) = 0;
           it1->second(2, 3) = g.edge_value(v3_neighbors_it);
-          ++counts.insert(std::make_pair(mapper.canonical_subgraph_address(it1->second), 0))
+          ++counts.insert(std::pair{mapper.canonical_subgraph_address(it1->second), 0})
                 .first->second;
         }
         ++v3_neighbors_it;
@@ -242,7 +242,7 @@ vcp<4, r, false>::generate_vector(const_vertex_iterator v1, const_vertex_iterato
           it1->second(0, 3) = it2->second(0, 2);
           it1->second(1, 3) = it2->second(1, 2);
           it1->second(2, 3) = 0;
-          ++counts.insert(std::make_pair(mapper.canonical_subgraph_address(it1->second), 0))
+          ++counts.insert(std::pair{mapper.canonical_subgraph_address(it1->second), 0})
                 .first->second;
         }
       } else { // there is an edge between the v3 vertex and the other v3 vertex serving as a v4
@@ -253,7 +253,7 @@ vcp<4, r, false>::generate_vector(const_vertex_iterator v1, const_vertex_iterato
           it1->second(0, 3) = it2->second(0, 2);
           it1->second(1, 3) = it2->second(1, 2);
           it1->second(2, 3) = g.edge_value(v3_neighbors_it);
-          ++counts.insert(std::make_pair(mapper.canonical_subgraph_address(it1->second), 0))
+          ++counts.insert(std::pair{mapper.canonical_subgraph_address(it1->second), 0})
                 .first->second;
         }
         ++v3_neighbors_it;
@@ -268,8 +268,7 @@ vcp<4, r, false>::generate_vector(const_vertex_iterator v1, const_vertex_iterato
         it1->second(0, 3) = 0;
         it1->second(1, 3) = 0;
         it1->second(2, 3) = g.edge_value(v3_neighbors_it);
-        ++counts.insert(std::make_pair(mapper.canonical_subgraph_address(it1->second), 0))
-              .first->second;
+        ++counts.insert(std::pair{mapper.canonical_subgraph_address(it1->second), 0}).first->second;
       }
       ++v3_neighbors_it;
     }
@@ -278,8 +277,8 @@ vcp<4, r, false>::generate_vector(const_vertex_iterator v1, const_vertex_iterato
     it1->second(0, 3) = 0;
     it1->second(1, 3) = 0;
     it1->second(2, 3) = 0;
-    counts.insert(std::make_pair(mapper.canonical_subgraph_address(it1->second), 0))
-        .first->second += g.vertex_count() - 2 - v3_count - v4_local_count;
+    counts.insert(std::pair{mapper.canonical_subgraph_address(it1->second), 0}).first->second +=
+        g.vertex_count() - 2 - v3_count - v4_local_count;
   }
 
   // account for the least connected substructures
@@ -294,8 +293,8 @@ vcp<4, r, false>::generate_vector(const_vertex_iterator v1, const_vertex_iterato
                  (2 + v3_count) * (g.vertex_count() - 2 - v3_count) - 3 * v4_count;
       }
     }
-    counts.insert(std::make_pair(mapper.canonical_subgraph_address(connectivity), 0))
-        .first->second += count;
+    counts.insert(std::pair{mapper.canonical_subgraph_address(connectivity), 0}).first->second +=
+        count;
   });
 
 #ifdef VCP_INSTRUMENT_K

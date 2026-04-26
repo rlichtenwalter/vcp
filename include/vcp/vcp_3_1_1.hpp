@@ -84,19 +84,19 @@ std::pair<const_edge_iterator, vcp<3, 1, true>::directedness_value> inline vcp<
     const { // out-neighbor iterators should always come first
   if (it1 != end1 && it2 != end2) {
     if (g.target_of(it1) < g.target_of(it2)) {
-      return std::make_pair(it1++, OUT);
+      return std::pair{it1++, OUT};
     } else if (g.target_of(it1) > g.target_of(it2)) {
-      return std::make_pair(it2++, IN);
+      return std::pair{it2++, IN};
     } else {
       ++it2;
-      return std::make_pair(it1++, BOTH);
+      return std::pair{it1++, BOTH};
     }
   } else if (it1 != end1) {
-    return std::make_pair(it1++, OUT);
+    return std::pair{it1++, OUT};
   } else if (it2 != end2) {
-    return std::make_pair(it2++, IN);
+    return std::pair{it2++, IN};
   } else {
-    return std::make_pair(end2, OUT); // the second element of this pair should never be used
+    return std::pair{end2, OUT}; // the second element of this pair should never be used
   }
 }
 

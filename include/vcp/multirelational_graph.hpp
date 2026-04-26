@@ -420,7 +420,7 @@ template <std::size_t r> std::istream &operator>>(std::istream &is, multirelatio
       typename multirelational_graph<r>::connectivity_address_type value;
       iss3 >> neighbor;
       iss4 >> value;
-      e_temp.push_back(std::make_pair(neighbor, value));
+      e_temp.push_back(std::pair{neighbor, value});
       ++edge_id;
     }
   }

@@ -40,6 +40,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `CITATION.cff` at the repository root for academic citation metadata. Preferred citation is the open-access 2014 SpringerPlus paper; the 2012 WWW conference paper is included under references. Gitea and GitHub render a "Cite this repository" affordance from this file.
 
 ### Changed
+- `std::make_pair(...)` replaced with `std::pair{...}` braced-initializer / CTAD form
+  throughout the headers, tools, and tests (~50 call sites across nine files). The C++17
+  CTAD-equivalent form drops the helper-template indirection and matches modern guidance
+  toward braced initialization. Where the original used explicit template arguments
+  (`std::make_pair<T1, T2>(...)` in test code), they are preserved as
+  `std::pair<T1, T2>{...}`.
 - All four graph foundation classes (`graph`, `directed_graph`, `multirelational_graph`,
   `multirelational_directed_graph`) now declare a defaulted noexcept move constructor and move
   assignment operator. Previously each declared a copy constructor, copy-assignment operator,
@@ -121,6 +127,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `vcp_static_mapper::operator<<` now uses `std::ranges::copy(c, out)` instead of `std::copy(c.begin(), c.end(), out)`. Three `std::max_element(c.begin(), c.end())` calls in `test/test_vcp_4_1_0.cpp` and `test/test_vcp_4_1_1.cpp` (six total) are correspondingly migrated to `std::ranges::max_element(c)`. Two `REQUIRE` lines in `test/test_square_matrix.cpp` that compared a fixed-size matrix cell against a `static_cast<int>(size_t expr)` are rewritten to land both sides into named `int` locals before the comparison so `modernize-use-integer-sign-comparison` does not fire through the cast. The `top_two_neighborhood_size_directed` helper added in this release is also restructured to count the out/in intersection in a single-loop-variable form so `bugprone-infinite-loop` no longer false-fires through the templated graph type. Aggregate effect: clang-tidy 20.x runs clean across the headers, tools, and tests with no behavior change.
 
 ### Removed
+- Dead template-metafunction primitives `vcp::TMP_power`, `vcp::TMP_min`, and `vcp::TMP_max` in
+  `vcp_dynamic_mapper.hpp`. These enum-trick metafunctions predated `constexpr` and were
+  unreferenced anywhere in the codebase; removed without replacement.
+- Redundant naked forward declarations of the free `vcp::edge` and `vcp::edge_value`
+  overloads in `vcp.hpp` (lines 117-133 prior to this change). The inline definitions
+  immediately following served as both declaration and definition for their callers in the
+  same translation unit; the leading forward decls were dead weight and a maintenance trap
+  (any out-of-line redefinition with the same signature would silently break the inline
+  contract).
 - `build_local_gcc.sh` — obsolete gcc-4.8 bootstrap script from 2013
 - `AUTHORS` — redundant with license header and source-file copyright notices
 - Vendored `lib/boost_1_53_0/` (~23 MB, 2013 vintage)
