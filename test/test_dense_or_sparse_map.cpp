@@ -174,11 +174,11 @@ TEST_CASE("dense_or_sparse_map with pair_hash handles std::pair keys at the spar
   dense_or_sparse_map<pair_t, unsigned long, 0> m;
   static_assert(!(decltype(m)::is_dense));
 
-  m.insert_or_zero(std::make_pair<std::size_t, std::size_t>(1, 2)) = 12;
-  m.insert_or_zero(std::make_pair<std::size_t, std::size_t>(3, 4)) = 34;
-  REQUIRE(*m.find(std::make_pair<std::size_t, std::size_t>(1, 2)) == 12);
-  REQUIRE(*m.find(std::make_pair<std::size_t, std::size_t>(3, 4)) == 34);
-  REQUIRE(m.find(std::make_pair<std::size_t, std::size_t>(2, 1)) == nullptr);
+  m.insert_or_zero(std::pair<std::size_t, std::size_t>{1, 2}) = 12;
+  m.insert_or_zero(std::pair<std::size_t, std::size_t>{3, 4}) = 34;
+  REQUIRE(*m.find(std::pair<std::size_t, std::size_t>{1, 2}) == 12);
+  REQUIRE(*m.find(std::pair<std::size_t, std::size_t>{3, 4}) == 34);
+  REQUIRE(m.find(std::pair<std::size_t, std::size_t>{2, 1}) == nullptr);
 }
 
 TEST_CASE("dense_or_sparse_map with pack_pair_key_by_bits handles std::pair keys at the "
@@ -191,12 +191,12 @@ TEST_CASE("dense_or_sparse_map with pack_pair_key_by_bits handles std::pair keys
   dense_or_sparse_map<pair_t, unsigned long, KEY_COUNT, pack_pair_key_by_bits<3>> m;
   static_assert(decltype(m)::is_dense);
 
-  m.insert_or_zero(std::make_pair<std::size_t, std::size_t>(1, 2)) = 12;
-  m.insert_or_zero(std::make_pair<std::size_t, std::size_t>(3, 4)) = 34;
+  m.insert_or_zero(std::pair<std::size_t, std::size_t>{1, 2}) = 12;
+  m.insert_or_zero(std::pair<std::size_t, std::size_t>{3, 4}) = 34;
   // (1, 2) packs to 1 | (2 << 3) = 17.
   // (3, 4) packs to 3 | (4 << 3) = 35.
-  REQUIRE(*m.find(std::make_pair<std::size_t, std::size_t>(1, 2)) == 12);
-  REQUIRE(*m.find(std::make_pair<std::size_t, std::size_t>(3, 4)) == 34);
+  REQUIRE(*m.find(std::pair<std::size_t, std::size_t>{1, 2}) == 12);
+  REQUIRE(*m.find(std::pair<std::size_t, std::size_t>{3, 4}) == 34);
   // Verify for_each yields the original pair, not the packed index.
   bool saw_12 = false;
   bool saw_34 = false;

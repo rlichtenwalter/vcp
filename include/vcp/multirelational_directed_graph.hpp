@@ -533,7 +533,7 @@ std::istream &operator>>(std::istream &is, multirelational_directed_graph<r> &g)
       typename multirelational_directed_graph<r>::connectivity_address_type value;
       iss3 >> neighbor;
       iss4 >> value;
-      out_e_temp.push_back(std::make_pair(neighbor, value));
+      out_e_temp.push_back(std::pair{neighbor, value});
       ++edge_id;
     }
   }
@@ -567,7 +567,7 @@ std::istream &operator>>(std::istream &is, multirelational_directed_graph<r> &g)
     for (const_edge_iterator eIt(g.out_neighbors_begin(vIt)); eIt != g.out_neighbors_end(vIt);
          ++eIt) {
       in_temp[g.vertex_id(g.target_of(eIt))].push_back(
-          std::make_pair(g.vertex_id(vIt), g.edge_value(eIt)));
+          std::pair{g.vertex_id(vIt), g.edge_value(eIt)});
     }
   }
 

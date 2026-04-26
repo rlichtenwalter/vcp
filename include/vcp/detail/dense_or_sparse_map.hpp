@@ -234,7 +234,7 @@ public:
   void clear() { map_.clear(); }
 
   Value &insert_or_zero(Key const &key) {
-    return map_.insert(std::make_pair(key, Value{})).first->second;
+    return map_.insert(std::pair{key, Value{}}).first->second;
   }
 
   Value const *find(Key const &key) const {

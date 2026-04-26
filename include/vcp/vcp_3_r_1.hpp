@@ -105,25 +105,24 @@ vcp<3, r, true>::next_union_element(
       temp;
   if (it1 != end1 && it2 != end2) {
     if (g.target_of(it1) < g.target_of(it2)) {
-      temp = std::make_pair(it1, std::make_pair(g.edge_value(it1), 0));
+      temp = std::pair{it1, std::pair{g.edge_value(it1), 0}};
       ++it1;
     } else if (g.target_of(it1) > g.target_of(it2)) {
-      temp = std::make_pair(it2, std::make_pair(0, g.edge_value(it2)));
+      temp = std::pair{it2, std::pair{0, g.edge_value(it2)}};
       ++it2;
     } else {
-      temp = std::make_pair(it1, std::make_pair(g.edge_value(it1), g.edge_value(it2)));
+      temp = std::pair{it1, std::pair{g.edge_value(it1), g.edge_value(it2)}};
       ++it1;
       ++it2;
     }
   } else if (it1 != end1) {
-    temp = std::make_pair(it1, std::make_pair(g.edge_value(it1), 0));
+    temp = std::pair{it1, std::pair{g.edge_value(it1), 0}};
     ++it1;
   } else if (it2 != end2) {
-    temp = std::make_pair(it2, std::make_pair(0, g.edge_value(it2)));
+    temp = std::pair{it2, std::pair{0, g.edge_value(it2)}};
     ++it2;
   } else {
-    return std::make_pair(
-        end2, std::make_pair(0, 0)); // the second element of this pair should never be used
+    return std::pair{end2, std::pair{0, 0}}; // the second element of this pair should never be used
   }
   return temp;
 }
@@ -157,10 +156,9 @@ vcp<3, r, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
       if (g.target_of(min1.first) != v2) {
         ++union_cardinality;
         ++counts
-              .insert(
-                  std::make_pair(v1v2 + (subgraph_address_type(min1.second.first) << (V1V3 + OUT)) +
-                                     (subgraph_address_type(min1.second.second) << (V1V3 + IN)),
-                                 0))
+              .insert(std::pair{v1v2 + (subgraph_address_type(min1.second.first) << (V1V3 + OUT)) +
+                                    (subgraph_address_type(min1.second.second) << (V1V3 + IN)),
+                                0})
               .first->second;
       }
       min1 = next_union_element(v1_out_neighbors_it, v1_out_neighbors_end, v1_in_neighbors_it,
@@ -169,10 +167,9 @@ vcp<3, r, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
       if (g.target_of(min2.first) != v1) {
         ++union_cardinality;
         ++counts
-              .insert(
-                  std::make_pair(v1v2 + (subgraph_address_type(min2.second.first) << (V2V3 + OUT)) +
-                                     (subgraph_address_type(min2.second.second) << (V2V3 + IN)),
-                                 0))
+              .insert(std::pair{v1v2 + (subgraph_address_type(min2.second.first) << (V2V3 + OUT)) +
+                                    (subgraph_address_type(min2.second.second) << (V2V3 + IN)),
+                                0})
               .first->second;
       }
       min2 = next_union_element(v2_out_neighbors_it, v2_out_neighbors_end, v2_in_neighbors_it,
@@ -181,12 +178,11 @@ vcp<3, r, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
              // need to check to exclude it
       ++union_cardinality;
       ++counts
-            .insert(
-                std::make_pair(v1v2 + ((subgraph_address_type(min1.second.first)) << (V1V3 + OUT)) +
-                                   (subgraph_address_type(min1.second.second) << (V1V3 + IN)) +
-                                   (subgraph_address_type(min2.second.first) << (V2V3 + OUT)) +
-                                   (subgraph_address_type(min2.second.second) << (V2V3 + IN)),
-                               0))
+            .insert(std::pair{v1v2 + ((subgraph_address_type(min1.second.first)) << (V1V3 + OUT)) +
+                                  (subgraph_address_type(min1.second.second) << (V1V3 + IN)) +
+                                  (subgraph_address_type(min2.second.first) << (V2V3 + OUT)) +
+                                  (subgraph_address_type(min2.second.second) << (V2V3 + IN)),
+                              0})
             .first->second;
       min1 = next_union_element(v1_out_neighbors_it, v1_out_neighbors_end, v1_in_neighbors_it,
                                 v1_in_neighbors_end);
@@ -198,10 +194,9 @@ vcp<3, r, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
     if (g.target_of(min1.first) != v2) {
       ++union_cardinality;
       ++counts
-            .insert(std::make_pair(v1v2 +
-                                       (subgraph_address_type(min1.second.first) << (V1V3 + OUT)) +
-                                       (subgraph_address_type(min1.second.second) << (V1V3 + IN)),
-                                   0))
+            .insert(std::pair{v1v2 + (subgraph_address_type(min1.second.first) << (V1V3 + OUT)) +
+                                  (subgraph_address_type(min1.second.second) << (V1V3 + IN)),
+                              0})
             .first->second;
     }
     min1 = next_union_element(v1_out_neighbors_it, v1_out_neighbors_end, v1_in_neighbors_it,
@@ -211,17 +206,16 @@ vcp<3, r, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator
     if (g.target_of(min2.first) != v1) {
       ++union_cardinality;
       ++counts
-            .insert(std::make_pair(v1v2 +
-                                       (subgraph_address_type(min2.second.first) << (V2V3 + OUT)) +
-                                       (subgraph_address_type(min2.second.second) << (V2V3 + IN)),
-                                   0))
+            .insert(std::pair{v1v2 + (subgraph_address_type(min2.second.first) << (V2V3 + OUT)) +
+                                  (subgraph_address_type(min2.second.second) << (V2V3 + IN)),
+                              0})
             .first->second;
     }
     min2 = next_union_element(v2_out_neighbors_it, v2_out_neighbors_end, v2_in_neighbors_it,
                               v2_in_neighbors_end);
   }
 
-  counts.insert(std::make_pair(v1v2, g.vertex_count() - 2 - union_cardinality));
+  counts.insert(std::pair{v1v2, g.vertex_count() - 2 - union_cardinality});
 
   return counts;
 }

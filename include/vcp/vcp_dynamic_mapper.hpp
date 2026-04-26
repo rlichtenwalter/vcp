@@ -14,22 +14,6 @@
 
 namespace vcp {
 
-template <std::size_t base, std::size_t exponent> struct TMP_power {
-  enum { value_matrix = base * TMP_power<base, exponent - 1>::value_matrix };
-};
-
-template <std::size_t base> struct TMP_power<base, 0> {
-  enum { value_matrix = 1 };
-};
-
-template <std::size_t value1, std::size_t value2> struct TMP_min {
-  enum { value_matrix = value1 < value2 ? value1 : value2 };
-};
-
-template <std::size_t value1, std::size_t value2> struct TMP_max {
-  enum { value_matrix = value1 > value2 ? value1 : value2 };
-};
-
 /**
  * @brief Compute-on-demand mapper from connectivity matrices to canonical element addresses.
  *
