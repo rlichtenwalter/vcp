@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- `check-json` pre-commit hook (commit stage), validates `CMakePresets.json`
+  and any future JSON files at commit time. Closes a small gap flagged by
+  `/standards-check` (`precommit.check_json` warning).
 - Doxygen docstrings added to all 17 public headers (`graph.hpp`, `directed_graph.hpp`,
   `multirelational_graph.hpp`, `multirelational_directed_graph.hpp`, `square_matrix.hpp`,
   `vcp.hpp`, `vcp_dynamic_mapper.hpp`, `vcp_static_mapper.hpp`, and all eight specialization
