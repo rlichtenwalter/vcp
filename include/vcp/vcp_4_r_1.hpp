@@ -19,7 +19,9 @@
 
 namespace vcp {
 
-template <std::size_t n, std::size_t r, bool d> class vcp;
+template <std::size_t n, std::size_t r, bool d>
+  requires(n >= 2 && r >= 1)
+class vcp;
 
 /**
  * @brief Partial specialization of vcp for 4-vertex subgraphs on a multirelational directed graph.
@@ -67,8 +69,8 @@ public:
    * @param v2 Iterator to the second pivot vertex.
    * @return Sparse map from canonical subgraph address to occurrence count.
    */
-  std::map<subgraph_address_type, unsigned long> const generate_vector(const_vertex_iterator v1,
-                                                                       const_vertex_iterator v2);
+  [[nodiscard]] std::map<subgraph_address_type, unsigned long>
+  generate_vector(const_vertex_iterator v1, const_vertex_iterator v2);
 
 private:
   using connectivity_matrix = square_matrix<connectivity_address_type, 4>;
@@ -196,7 +198,7 @@ vcp<4, r, true>::next_union_element(const_edge_iterator &it1, const_edge_iterato
 }
 
 template <std::size_t r>
-std::map<typename vcp<4, r, true>::subgraph_address_type, unsigned long> const
+std::map<typename vcp<4, r, true>::subgraph_address_type, unsigned long>
 vcp<4, r, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator v2) {
   std::map<subgraph_address_type, unsigned long> counts;
   // temp_edge_types is a class member; see header rationale. O(k) clear.

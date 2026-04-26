@@ -13,7 +13,9 @@
 
 namespace vcp {
 
-template <std::size_t n, std::size_t r, bool d> class vcp;
+template <std::size_t n, std::size_t r, bool d>
+  requires(n >= 2 && r >= 1)
+class vcp;
 
 // Safe for shared-instance concurrent calls: this specialization holds
 // no mutable per-call state (all state in `generate_vector` is stack-local,
@@ -71,8 +73,8 @@ public:
    * @param v2 Iterator to the second pivot vertex.
    * @return Sparse map from canonical subgraph address to occurrence count.
    */
-  std::map<subgraph_address_type, unsigned long> const generate_vector(const_vertex_iterator v1,
-                                                                       const_vertex_iterator v2);
+  [[nodiscard]] std::map<subgraph_address_type, unsigned long>
+  generate_vector(const_vertex_iterator v1, const_vertex_iterator v2);
 
 private:
   // Bit-shift positions (not mutually-exclusive enum values): the V*V*
@@ -127,7 +129,7 @@ vcp<3, r, true>::next_union_element(
 }
 
 template <std::size_t r>
-std::map<typename vcp<3, r, true>::subgraph_address_type, unsigned long> const
+std::map<typename vcp<3, r, true>::subgraph_address_type, unsigned long>
 vcp<3, r, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator v2) {
   std::map<subgraph_address_type, unsigned long> counts;
 

@@ -13,7 +13,9 @@
 
 namespace vcp {
 
-template <std::size_t n, std::size_t r, bool d> class vcp;
+template <std::size_t n, std::size_t r, bool d>
+  requires(n >= 2 && r >= 1)
+class vcp;
 
 /**
  * @brief Full specialization of vcp for 4-vertex subgraphs on a single-relation directed graph.
@@ -54,7 +56,7 @@ public:
    *
    * @return 2112.
    */
-  constexpr static std::size_t element_count();
+  [[nodiscard]] constexpr static std::size_t element_count() noexcept;
 
   /**
    * @brief Compute the VCP feature vector for the pivot pair (v1, v2).
@@ -66,8 +68,8 @@ public:
    * @param v2 Iterator to the second pivot vertex.
    * @return Array of 2112 occurrence counts indexed by element address.
    */
-  std::array<unsigned long, num_elements> const generate_vector(const_vertex_iterator v1,
-                                                                const_vertex_iterator v2);
+  [[nodiscard]] std::array<unsigned long, num_elements> generate_vector(const_vertex_iterator v1,
+                                                                        const_vertex_iterator v2);
 
 private:
   // Directedness of the edge between the pivot vertex and a v3 candidate:
@@ -89,7 +91,7 @@ private:
   static constexpr std::size_t V3V4 = 1024;
   directed_graph const &g;
   constexpr static const std::size_t num_structures = 4096;
-  static std::size_t element_address(std::size_t subgraph_address);
+  [[nodiscard]] static std::size_t element_address(std::size_t subgraph_address) noexcept;
   unsigned long connectedPairs{0};
   unsigned long amutualPairs{0};
   unsigned long mutualPairs{0};
@@ -107,7 +109,7 @@ private:
                                                                         const_edge_iterator) const;
 };
 
-inline std::size_t vcp<4, 1, true>::element_address(std::size_t subgraph_address) {
+inline std::size_t vcp<4, 1, true>::element_address(std::size_t subgraph_address) noexcept {
   constexpr static const std::array<std::size_t, num_structures> map = {
       {0,    1,    2,    3,    4,    5,    6,    7,    8,    9,    10,   11,   12,   13,   14,
        15,   4,    5,    6,    7,    16,   17,   18,   19,   20,   21,   22,   23,   24,   25,
@@ -386,7 +388,7 @@ inline std::size_t vcp<4, 1, true>::element_address(std::size_t subgraph_address
   return map[subgraph_address];
 }
 
-constexpr std::size_t vcp<4, 1, true>::element_count() { return num_elements; }
+constexpr std::size_t vcp<4, 1, true>::element_count() noexcept { return num_elements; }
 
 inline vcp<4, 1, true>::vcp(directed_graph const &g)
     : g(g), v3Vertices(std::make_unique<std::pair<const_vertex_iterator, unsigned short>[]>(
@@ -451,8 +453,8 @@ std::pair<const_edge_iterator, typename vcp<4, 1, true>::directedness_value> inl
   }
 }
 
-std::array<unsigned long, vcp<4, 1, true>::element_count()> const inline vcp<
-    4, 1, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator v2) {
+inline std::array<unsigned long, vcp<4, 1, true>::element_count()>
+vcp<4, 1, true>::generate_vector(const_vertex_iterator v1, const_vertex_iterator v2) {
   std::array<unsigned long, element_count()> counts = {{0}};
 
   std::size_t v1v2(V1V2 * OUT * g.out_edge_exists(v1, v2) + V1V2 * IN * g.in_edge_exists(v1, v2));

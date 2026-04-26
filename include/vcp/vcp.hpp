@@ -45,8 +45,16 @@ namespace vcp {
  * @tparam n Number of vertices in each enumerated subgraph (pivot pair + n-2 others).
  * @tparam r Number of edge relations.
  * @tparam d True for directed graphs; false for undirected.
+ *
+ * @note The constraint `requires (n >= 2 && r >= 1)` rejects nonsensical
+ * instantiations at the class boundary. Without it, a request for
+ * `vcp<0, 0, false>` substitutes into the body and produces a deep
+ * template-error cascade out of `vcp_dynamic_mapper`. The constraint
+ * surfaces a one-line "constraints not satisfied" diagnostic instead.
  */
-template <std::size_t n, std::size_t r, bool d> class vcp {
+template <std::size_t n, std::size_t r, bool d>
+  requires(n >= 2 && r >= 1)
+class vcp {
 public:
   /**
    * @brief Graph type selected automatically based on the (r, d) parameters.
@@ -95,8 +103,8 @@ public:
    * @param v2 Iterator to the second pivot vertex.
    * @return Sparse map from canonical subgraph address to occurrence count.
    */
-  std::map<subgraph_address_type, unsigned long> const generate_vector(const_vertex_iterator v1,
-                                                                       const_vertex_iterator v2);
+  [[nodiscard]] std::map<subgraph_address_type, unsigned long>
+  generate_vector(const_vertex_iterator v1, const_vertex_iterator v2);
 
 private:
   graph_type const &g;
@@ -163,9 +171,12 @@ edge_value(multirelational_directed_graph<r> const &g, const_edge_iterator edge)
   return g.edge_value(edge);
 }
 
-template <std::size_t n, std::size_t r, bool d> vcp<n, r, d>::vcp(graph_type const &g) : g(g) {}
+template <std::size_t n, std::size_t r, bool d>
+  requires(n >= 2 && r >= 1)
+vcp<n, r, d>::vcp(graph_type const &g) : g(g) {}
 
 template <std::size_t n, std::size_t r, bool d>
+  requires(n >= 2 && r >= 1)
 void vcp<n, r, d>::helper(std::array<const_vertex_iterator, n> &vertices, std::size_t current_index,
                           square_matrix<connectivity_address_type, n> &connectivity,
                           std::map<subgraph_address_type, unsigned long> &counts) {
@@ -193,7 +204,8 @@ void vcp<n, r, d>::helper(std::array<const_vertex_iterator, n> &vertices, std::s
 }
 
 template <std::size_t n, std::size_t r, bool d>
-std::map<typename vcp<n, r, d>::subgraph_address_type, unsigned long> const
+  requires(n >= 2 && r >= 1)
+std::map<typename vcp<n, r, d>::subgraph_address_type, unsigned long>
 vcp<n, r, d>::generate_vector(const_vertex_iterator v1, const_vertex_iterator v2) {
   std::map<subgraph_address_type, unsigned long> counts;
   std::array<const_vertex_iterator, n> vertices;

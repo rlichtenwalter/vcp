@@ -85,7 +85,7 @@ public:
    *
    * @return The number of distinct subgraph addresses.
    */
-  constexpr subgraph_address_type subgraph_count() const;
+  [[nodiscard]] constexpr subgraph_address_type subgraph_count() const noexcept;
 
   /**
    * @brief Compute the subgraph address for the given connectivity matrix.
@@ -98,7 +98,7 @@ public:
    * @param connectivity n × n matrix of r-bit edge bitmasks.
    * @return Packed integer encoding of the subgraph.
    */
-  subgraph_address_type
+  [[nodiscard]] subgraph_address_type
   subgraph_address(square_matrix<connectivity_address_type, n> const &connectivity) const;
 
   /**
@@ -112,7 +112,7 @@ public:
    * @param connectivity n × n matrix of r-bit edge bitmasks.
    * @return Canonical element address (minimum over isomorphic permutations).
    */
-  subgraph_address_type
+  [[nodiscard]] subgraph_address_type
   canonical_subgraph_address(square_matrix<connectivity_address_type, n> const &connectivity) const;
 
   /**
@@ -125,7 +125,7 @@ public:
    * @param address A canonical element address in [0, subgraph_count()).
    * @return n × n connectivity matrix reconstructed from the address.
    */
-  square_matrix<connectivity_address_type, n>
+  [[nodiscard]] square_matrix<connectivity_address_type, n>
   element_structure(subgraph_address_type const &address) const;
 
 private:
@@ -148,7 +148,7 @@ template <std::size_t n, std::size_t r, bool d> vcp_dynamic_mapper<n, r, d>::vcp
 
 template <std::size_t n, std::size_t r, bool d>
 constexpr typename vcp_dynamic_mapper<n, r, d>::subgraph_address_type
-vcp_dynamic_mapper<n, r, d>::subgraph_count() const {
+vcp_dynamic_mapper<n, r, d>::subgraph_count() const noexcept {
   return subgraph_address_type(1) << n * (n - 1) * r * (d + 1) / 2;
 }
 
