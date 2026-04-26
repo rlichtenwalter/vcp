@@ -20,11 +20,6 @@
 
 namespace vcp {
 
-using vertex_id_t = std::size_t;
-using edge_id_t = std::size_t;
-using const_vertex_iterator = void *const *;
-using const_edge_iterator = void *const *;
-
 /**
  * @brief Directed multirelational graph with per-edge relation bitmasks and bidirectional CSR.
  *
