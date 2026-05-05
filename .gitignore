@@ -5,3 +5,8 @@ build/
 
 # NFS temporary files (appear when files are deleted while still open over NFS)
 .nfs*
+
+# Local environment files; never commit secrets. .env.example is committed.
+.env
+.env.*
+!.env.example
