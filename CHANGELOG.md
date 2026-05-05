@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `check-json` pre-commit hook (commit stage), validates `CMakePresets.json`
   and any future JSON files at commit time. Closes a small gap flagged by
   `/standards-check` (`precommit.check_json` warning).
+- Gitea Actions workflow `.gitea/workflows/mirror-release-to-github.yml` that mirrors Gitea releases to GitHub on every `release: published` event. Closes the gap left by Gitea's push mirror, which only mirrors git refs and not release metadata. Includes a `workflow_dispatch` path with a `tag` input for manual testing/debugging against any existing Gitea release. Idempotent (skip-if-exists). Prepends `> Originally released YYYY-MM-DD.` to the GitHub body only when the original Gitea release date differs from today, so real-time mirrors are unannotated and backfill-style runs are clearly marked.
 - Doxygen docstrings added to all 17 public headers (`graph.hpp`, `directed_graph.hpp`,
   `multirelational_graph.hpp`, `multirelational_directed_graph.hpp`, `square_matrix.hpp`,
   `vcp.hpp`, `vcp_dynamic_mapper.hpp`, `vcp_static_mapper.hpp`, and all eight specialization
