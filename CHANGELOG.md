@@ -9,34 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- `.pre-commit-config.yaml`: add `args: [--fix=lf]` to the `mixed-line-ending` hook so every commit normalises to LF regardless of the file's current majority ending (the bare hook defaults to `--fix=auto`). Resolves `precommit.mixed_line_ending_fix_lf`.
+- Pre-commit `mixed-line-ending` hook now normalises every commit to LF via `args: [--fix=lf]`
 
 ## [2.0.0] - 2026-05-05
 
 ### Added
-- `check-json` pre-commit hook (commit stage), validates `CMakePresets.json`
-  and any future JSON files at commit time. Closes a small gap flagged by
-  `/standards-check` (`precommit.check_json` warning).
-- Gitea Actions workflow `.gitea/workflows/mirror-release-to-github.yml` that mirrors Gitea releases to GitHub on every `release: published` event. Closes the gap left by Gitea's push mirror, which only mirrors git refs and not release metadata. Includes a `workflow_dispatch` path with a `tag` input for manual testing/debugging against any existing Gitea release. Idempotent (skip-if-exists). Prepends `> Originally released YYYY-MM-DD.` to the GitHub body only when the original Gitea release date differs from today, so real-time mirrors are unannotated and backfill-style runs are clearly marked.
-- Ignore `.env` and `.env.*` in `.gitignore` so locally-rendered environment files cannot leak into commits, while still permitting a committed `.env.example` template. Closes the `universal.gitignore_env_secrets` standards-check finding.
-- Doxygen docstrings added to all 17 public headers (`graph.hpp`, `directed_graph.hpp`,
-  `multirelational_graph.hpp`, `multirelational_directed_graph.hpp`, `square_matrix.hpp`,
-  `vcp.hpp`, `vcp_dynamic_mapper.hpp`, `vcp_static_mapper.hpp`, and all eight specialization
-  headers). Every public class, typedef, constructor, and method is documented with `/** */`
-  block comments following the `@brief` / prose / `@tparam` / `@param` / `@return` convention
-  used in sibling libraries. Thread-safety contracts and per-specialization element-count
-  invariants are called out explicitly.
-- Unit-test coverage backfill for foundation classes and specializations that previously had zero direct coverage. New test files: `test_graph.cpp` (round-trip, CSR end-sentinel, malformed-input rejection, copy ctor/assign), `test_directed_graph.cpp` (in-neighbor derivation, out/in edge sentinel symmetry, asymmetric vs mutual distinctions, 2N+1 vertex-layout copy), `test_vcp_3_1_0.cpp` and `test_vcp_3_1_1.cpp` (ground-truth bucket routing + sum invariants for the n=3 specializations), `test_vcp_4_1_0.cpp` and `test_vcp_4_1_1.cpp` (sum-and-peak invariants across K4/P4/star/C4/empty/V=5 at release-capable unit-test level, covering the same arithmetic guarded at debug-only by the NDEBUG assertions in the vcp_4_1_*.hpp tails, plus K5-bidirectional single-bucket concentration as a strictly stronger invariant than sum alone), `test_vcp_static_mapper.cpp` (cardinality match against paper for (4,1,0), the n=3-no-permutation case for (3,1,1), subgraph-address round-trip, exhaustive cross-check that static and dynamic mappers induce the same equivalence partition across all 64 subgraphs of (4,1,0)). Also extended `test_vcp_dynamic_mapper.cpp` with a zero-address decoder edge case and a `subgraph_count()` formula check. 58 new test cases across 580 new assertions. ctest grows from 60 to 118.
-- `detail::dense_or_sparse_map` — a two-tier compile-time-dispatched container used internally by `vcp<4, r, false>` and `vcp<4, r, true>` for the `temp_edge_types` and `edge_types` maps in place of the previous `std::map` usage. Tier 1 (dense) is a heap-backed `std::array` with a presence-tracking companion vector; tier 2 (sparse) is `std::unordered_map` with a pair-aware hash combiner for the directed key type. The container choice is driven by an 8 MB byte budget: r ≤ 20 undirected and r ≤ 10 directed fall into the dense tier, higher r values take the sparse fallback. Selected after a benchmark study (`benchmark/small_map_study/`) that measured observed cardinality distribution (Phase B) and container break-even curves (Phase C); a proposed three-tier variant with a `std::vector<pair>` middle tier was rejected because the microbench showed it had no regime where it was strictly best. `temp_edge_types` is promoted from a function-local to a class-member instance so one allocation survives across all `generate_vector` calls on the same profiler, with an O(k) logical clear per call replacing the previous per-call allocator traffic. `counts` (the return map) is left as `std::map` in this change; its `boost::multiprecision::cpp_int` keys for large r make the dense tier infeasible and the sparse tier require cpp_int-hash support, which is deferred.
-- `test/test_dense_or_sparse_map.cpp` — unit tests covering tier-selection predicates, insert-or-zero semantics, the find-vs-absent distinction at value zero (regression for a previous sentinel-based design that confused the `gaps` zero count with "never inserted"), clear-without-bleed, for_each iteration, the sparse-tier pair-keyed path with `pair_hash`, and the dense-tier pair-keyed path with `pack_pair_key_by_bits`.
-- `benchmark/small_map_study/` — one-off investigation harness containing `bench_container_mix` (Catch2 microbenchmark) and `generate_study_fixtures.py` that drove the container-strategy decision. Not shipped in the library build by default; opt-in via `-DVCP_BUILD_SMALL_MAP_STUDY=ON`. Recorded results under `benchmark/small_map_study/results/` document observed cardinality per workload, container-comparison microbench, and the synthesis that motivated two-tier over three-tier.
-- `benchmark/counts_map_study/` — one-off investigation harness comparing six candidate replacements for the `std::map<subgraph_address_type, unsigned long>` return value of `vcp<4, r, d>::generate_vector`: `StdMap` baseline, `HashSortedKeys`, `HashSortedIters`, `HashSortedPairs`, `SortedVector`, and `BatchedDedup`. Six scenarios span the (N, K, distribution) space — tiny-hot, small-zipf, medium-uniform, large-sparse, huge-oneshot, adversarial-descending. Opt-in via `-DVCP_BUILD_COUNTS_BENCH=ON`. Findings in `benchmark/counts_map_study/results/summary.md`: the three `Hash*` variants are within 2-6% of each other; `HashSortedPairs` is recommended for the typical (N/K in hundreds-to-thousands) regime, winning by 3-17× over `StdMap`. `SortedVector` is ruled out (up to 143× slower than the best candidate at large K). `BatchedDedup` wins the N/K≈1 large-r regime by 3-6× and is a future compile-time dispatch candidate. The refactor itself is deferred pending a profile showing `counts`-assembly on the end-to-end critical path; rationale captured in `.claude/journal.md`.
-- `vcp_gen_er_fixture` CLI tool (`tools/vcp_gen_er_fixture.cpp`) — C++ generator for sparse Erdős–Rényi fixtures using a two-pass CSR-style sampling procedure (degree count, then RNG-replayed slot fill, then streamed row emission). Produces the undirected graph, a byte-identical hardlink for the bidirectional-directed variant, and a uniform-sample pairs file in a single invocation. Completes in ~6 s at n=10M vs the earlier Python prototype's ~1-2 min, with peak RSS ~400 MB instead of a risk of OOM on set-based adjacency. Same tool can be reused for any future sparse random-graph fixture need.
-- Large-tier benchmark workload (`./benchmark/run.sh --large`) on a 10M-node avg-degree-5 sparse ER graph, exercising the four unirelational VCP procedures (3/4 × undirected/directed). Fixture generation is delegated to `vcp_gen_er_fixture`.
-- `regression/run.sh` Phase L auto-detects the benchmark's large fixture and runs legacy-vs-current byte-diff consistency checks on the same 10M-node graph. Known divergence on `vcp 4 1 1` (legacy has an unfixed underflow) is encoded as an expected result; identical output on 3/4 × {undirected, directed} is the PASS criterion.
-- Benchmark suite under `benchmark/` with two layers:
-  - Cross-ref tool-level runner (`benchmark/run.sh`) that builds arbitrary git revisions in isolated worktrees, times the CLI tools against a curated set of seeded fixtures, and emits a markdown comparison table. Auto-detects legacy (Makefile) vs modern (CMake) build systems and prepends the 2012 baseline commit by default so current-branch performance can be measured directly against the original GitHub state.
-  - Catch2 library-level micro-benchmarks (`benchmark/bench_vcp.cpp`) gated on the new `VCP_BUILD_BENCHMARKS` CMake option, mirroring the `bench_kdtree.cpp` / `bench_mrmr.cpp` pattern in sibling libraries.
+- `check-json` pre-commit hook validating `CMakePresets.json` and any future JSON files at commit time
+- Gitea Actions workflow mirroring Gitea releases to GitHub, closing the push mirror's release-metadata gap
+  - Idempotent, with a `workflow_dispatch` path (`tag` input) for manual backfill
+- Ignore `.env` and `.env.*` in `.gitignore` while still permitting a committed `.env.example` template
+- Doxygen docstrings on all 17 public headers, covering every public class, typedef, constructor, and method
+  - Thread-safety contracts and per-specialization element-count invariants called out explicitly
+- Unit-test coverage backfill for foundation classes and specializations that previously had zero direct coverage; ctest grows from 60 to 118
+- `detail::dense_or_sparse_map` — two-tier compile-time-dispatched container replacing `std::map` for the `vcp<4, r, d>` edge-type maps
+  - Dense tier under an 8 MB byte budget (r ≤ 20 undirected, r ≤ 10 directed); `std::unordered_map` fallback above
+- `test/test_dense_or_sparse_map.cpp` covering tier selection, insert-or-zero semantics, and both pair-keyed paths
+- `benchmark/small_map_study/` — opt-in (`-DVCP_BUILD_SMALL_MAP_STUDY=ON`) microbenchmark harness and recorded results behind the container-strategy decision
+- `benchmark/counts_map_study/` — opt-in (`-DVCP_BUILD_COUNTS_BENCH=ON`) study of six candidate `counts`-map replacements; findings in `benchmark/counts_map_study/results/summary.md`
+- `vcp_gen_er_fixture` CLI tool (`tools/vcp_gen_er_fixture.cpp`) generating sparse Erdős–Rényi fixtures (~6 s at n=10M vs ~1-2 min for the earlier Python prototype)
+- Large-tier benchmark workload (`./benchmark/run.sh --large`) on a 10M-node sparse ER graph, exercising the four unirelational VCP procedures
+- `regression/run.sh` Phase L runs legacy-vs-current byte-diff checks on the benchmark's 10M-node fixture, with legacy's known `vcp 4 1 1` divergence encoded as expected
+- Benchmark suite under `benchmark/`: a cross-revision tool-level runner (`benchmark/run.sh`) and Catch2 micro-benchmarks gated on `VCP_BUILD_BENCHMARKS`
+  - The runner builds arbitrary git revisions in isolated worktrees and compares against the 2012 baseline by default
 - CMake build system (minimum 3.21) replacing the hand-written Makefile
 - CMake install support with `find_package(vcp)` for downstream consumers
 - pkg-config support for non-CMake consumers
@@ -48,167 +42,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Gitea Actions CI workflow: build-and-test (Release/Debug matrix), quality (pre-commit), lint (clang-tidy)
 - CLI `--version` output for each tool, sourced from VERSION via CMake
 
-- `CITATION.cff` at the repository root for academic citation metadata. Preferred citation is the open-access 2014 SpringerPlus paper; the 2012 WWW conference paper is included under references. Gitea and GitHub render a "Cite this repository" affordance from this file.
-- `CMakePresets.json` at the repository root with three named configurations
-  (`release`, `debug`, `sanitize`) covering the three meaningful build contexts
-  the project ships. Each preset has its own `binaryDir` under `build/<name>`,
-  so switching between configs no longer triggers a full rebuild — each tree
-  keeps its own warm cache. Build presets and test presets mirror the
-  configure presets one-for-one, and the `sanitize` test preset carries
-  the `ASAN_OPTIONS` / `UBSAN_OPTIONS` halt-on-error contract that was
-  previously duplicated inline in CI yaml. The preset file is at version
-  `3` (CMake 3.21+, comfortably below our 3.24 floor) and explicitly
-  declares `cmakeMinimumRequired: 3.24` so editors and tooling refuse
-  older toolchains. IDEs that support presets (VSCode CMake Tools,
-  CLion, KDevelop, Qt Creator) read the file directly. Schema string
-  intentionally omitted: CMake errors on `$schema` below preset version
-  8, and version 8 requires CMake 3.30 — outside our floor.
+- `CITATION.cff` with the open-access 2014 SpringerPlus paper as preferred citation; Gitea and GitHub render a "Cite this repository" affordance from it
+- `CMakePresets.json` with `release`, `debug`, and `sanitize` configure/build/test presets, each keeping its own warm cache under `build/<name>`
+  - The `sanitize` test preset carries the `ASAN_OPTIONS`/`UBSAN_OPTIONS` halt-on-error contract previously duplicated inline in CI yaml
 
 ### Changed
-- `VCP_WARNING_FLAGS` expanded with `-Wconversion -Wsign-conversion
-  -Wshadow -Wnull-dereference -Wdouble-promotion -Wimplicit-fallthrough`
-  plus GCC-only `-Wlogical-op` and `-Wduplicated-cond`. Each catches a
-  class of bug the existing `-Wall -Wextra -Werror` baseline does not.
-  Mechanical fallout fixed across nine headers — all changes are pure
-  annotations (`static_cast`) or parameter renames; no semantics
-  altered.
-  - **Shadow renames (9 sites):** every `vcp(graph_type const &g) :
-    g(g) {}` constructor renamed its parameter to `graph` to stop
-    shadowing the member `g`. Affects `vcp.hpp` and all eight
-    specialization headers (`vcp_3_1_0.hpp`, `vcp_3_1_1.hpp`,
-    `vcp_3_r_0.hpp`, `vcp_3_r_1.hpp`, `vcp_4_1_0.hpp`, `vcp_4_1_1.hpp`,
-    `vcp_4_r_0.hpp`, `vcp_4_r_1.hpp`). The `vcp_4_r_0` and `vcp_4_r_1`
-    constructors propagate the rename through their bodies.
-  - **Iterator-subtraction sign casts (4 sites):** `graph::vertex_id`,
-    `graph::edge_id`, the equivalents on `directed_graph`,
-    `multirelational_graph<r>`, and `multirelational_directed_graph<r>`
-    now `static_cast<{vertex,edge}_id_t>(...)` the iterator-difference
-    result before returning. The values are non-negative for any valid
-    iterator in the range, so the cast is value-preserving.
-  - **Pointer-subtraction sign casts (5 sites):** `v3_count(...)` in
-    `vcp_4_1_0.hpp`, `vcp_4_1_1.hpp`, `vcp_4_r_0.hpp`, `vcp_4_r_1.hpp`,
-    plus the `vertex_count() - 2 - (...)` site in `vcp_4_r_1.hpp`, now
-    cast the `pair*`-difference result to the destination unsigned
-    type explicitly.
-  - **Domain-narrowing casts in subgraph encoding (vcp_4_1_0.hpp +
-    vcp_4_1_1.hpp):** `v3Vertices_end->second = v1v2 + V1V3 * ...` was
-    a `size_t` -> `unsigned char` (or `unsigned short`) implicit
-    narrowing. The destination width is correct (the bitmask fits
-    trivially); each assignment now `static_cast`s explicitly. The
-    `v1v2` local in `vcp_4_1_0.hpp` is also re-typed from `size_t` to
-    `unsigned char` to match its actual domain. Two `counts[...]`
-    indexing expressions in the same file gain a `static_cast<size_t>`
-    so the signed `int` from arithmetic on `unsigned char` operands
-    does not implicitly promote into the unsigned `size_t` index.
-  - **`std::bit_width` return cast (2 sites):** the
-    `multirelational_*_graph` `relation_count()` helpers now
-    `static_cast<size_t>` the `int` returned by `std::bit_width`. The
-    return is non-negative.
-  - **K4-bidirectional underflow guard (vcp_4_1_0.hpp + vcp_4_1_1.hpp):**
-    the Debug-only assertion on `(2 + v3_count) * (V - 2 - v3_count)`
-    now casts the LHS factor to `long long` instead of casting the
-    whole product, so the multiplication runs in pure signed math.
-- `.gitea/workflows/ci.yml` now invokes presets instead of inline
-  `-DCMAKE_BUILD_TYPE=...`/`-DVCP_SANITIZE=ON` flags. The
-  `build-and-test` matrix's `build_type: [Release, Debug]` becomes
-  `preset: [release, debug]`, the `lint` job uses `cmake --preset=release`
-  and `clang-tidy -p build/release`, and the `sanitize` job uses
-  `cmake --preset=sanitize` with `ctest --preset=sanitize` (sanitizer
-  runtime options now live on the test preset, not the workflow yaml).
-  The CI reproduces a developer's local `cmake --preset=...` invocation
-  byte-for-byte; failures are reproducible by name without
-  copy-pasting the matrix expansion.
-- `.gitignore` simplified: the `build-*/` glob is removed in favor of
-  the existing `build/` rule, since presets place all per-config trees
-  under `build/<name>/` (a subdirectory of the already-ignored root).
-- CI `build-and-test` job extended with a Clang matrix entry; both GCC and Clang now build
-  the library, tools, tests, and run the full ctest suite at Release and Debug. The library
-  is header-only and implicitly promised Clang compatibility; the matrix makes that
-  promise enforceable on every PR. Matrix is `{compiler: gcc, clang} × {build_type: Release, Debug}`
-  with `fail-fast: false` so a failure in one configuration does not mask others.
-- Test and benchmark targets now compile with the same warning flags as the CLI tools
-  (`-Wall -Wextra -Werror -pedantic -Wno-unused-local-typedefs`), via a new shared
-  `VCP_WARNING_FLAGS` CMake variable. Previously `vcp_add_catch_test` passed only
-  `${VCP_SANITIZE_FLAGS}` and the benchmark targets duplicated their own flag list,
-  so warnings the tools would error on could slide through test or benchmark code
-  silently. Adding a flag to `VCP_WARNING_FLAGS` now lands in every consumer build at once.
-- `std::make_pair(...)` replaced with `std::pair{...}` braced-initializer / CTAD form
-  throughout the headers, tools, and tests (~50 call sites across nine files). The C++17
-  CTAD-equivalent form drops the helper-template indirection and matches modern guidance
-  toward braced initialization. Where the original used explicit template arguments
-  (`std::make_pair<T1, T2>(...)` in test code), they are preserved as
-  `std::pair<T1, T2>{...}`.
-- All four graph foundation classes (`graph`, `directed_graph`, `multirelational_graph`,
-  `multirelational_directed_graph`) now declare a defaulted noexcept move constructor and move
-  assignment operator. Previously each declared a copy constructor, copy-assignment operator,
-  and destructor without an explicit move pair. Per the rule of five, declaring any of those
-  three suppresses the compiler-generated implicit moves; downstream code holding a graph in
-  a `std::vector<graph>` would silently fall back to copying the two heap-allocated CSR arrays
-  (and the `connectivity_address_type[]` array on the multirelational classes) on every
-  reallocation. With the new defaulted moves, vector resizes and pass-by-value moves are
-  O(1) pointer swaps. The defaults are correct because every member is a `unique_ptr<T[]>`,
-  whose move is noexcept and transfers ownership; no callers are broken.
-- `[[nodiscard]]` added to every observer on the public API surface. Coverage:
-  `vertex_count`, `edge_count`, `relation_count`, `vertices_begin`/`end`, `edges_begin`/`end`,
-  `out_/in_edges_begin`/`end`, `neighbors_begin`/`end`, `out_/in_neighbors_begin`/`end`,
-  `vertex_id`, `target_of`, `edge_id`, `edge_exists` (both overloads), `edge` /
-  `out_edge` / `in_edge` (the find-edge family — highest-risk silent-discard targets,
-  since they return a nullable iterator), `edge_value`, the four `*_edge_exists` overloads,
-  and on `square_matrix::size`, `square_matrix::operator()` (const overload only — non-const
-  is the setter idiom and follows `std::vector::operator[]` convention by omission), the
-  full `vcp_dynamic_mapper` and `vcp_static_mapper` observer surfaces (`subgraph_count`,
-  `subgraph_address`, `canonical_subgraph_address`, `element_address`, `element_structure`,
-  `n`/`r`/`d` accessors), and `generate_vector` on the primary `vcp` template plus all eight
-  specializations. C++17 attribute (P0189R1); discarding the return on a public observer is
-  always wrong and now produces a compiler warning. Pure additive change with zero ABI impact.
-- `noexcept` added to one-line accessors on the four graph foundation classes
-  (`vertex_count`, `edge_count`, `out_/in_edge_count`, `vertices_begin`/`end`,
-  `edges_begin`/`end`, `out_/in_edges_begin`/`end`, `neighbors_*`, `out_/in_neighbors_*`,
-  `vertex_id`, `target_of`, `edge_id`, single-iterator `edge_exists`) and on
-  `square_matrix::size`, plus the defaulted move ctor/assign added in this release. Required
-  on the moves so `std::vector<graph>` reallocations actually move (a throwing move would
-  force a copy fallback). The accessors are trivially non-throwing — no allocation, no
-  exception path — and `noexcept` documents the contract for downstream `noexcept`-correctness
-  analysis.
-- Top-level `const` dropped from the return type of `generate_vector` across the primary
-  `vcp` template (`vcp.hpp`) and all eight specializations (`vcp_3_1_0.hpp`,
-  `vcp_3_1_1.hpp`, `vcp_3_r_0.hpp`, `vcp_3_r_1.hpp`, `vcp_4_1_0.hpp`, `vcp_4_1_1.hpp`,
-  `vcp_4_r_0.hpp`, `vcp_4_r_1.hpp`). The previous `std::map<...> const generate_vector(...)`
-  / `std::array<unsigned long, N> const generate_vector(...)` form put `const` on the
-  returned rvalue, which prevented the call site's `auto m = v.generate_vector(...)` from
-  selecting the move constructor (a const rvalue can only bind to a copy ctor's `const T&`),
-  silently forcing a copy of the std::map's internal tree on every call. Forbidden by Core
-  Guidelines F.49 and warned by `-Wignored-qualifiers`. No call site breaks because `auto`
-  on an rvalue already strips top-level `const`; the only behavioral change is that callers
-  now move instead of copy. Affects 18 declaration/definition pairs total.
-- The primary `vcp<n, r, d>` template now carries a C++20 requires-clause:
-  `requires (n >= 2 && r >= 1)`. Previously, an instantiation like `vcp<0, 0, false>` would
-  proceed into the body and emit a deep template-error cascade out of `vcp_dynamic_mapper`
-  (40+ lines of unrelated diagnostics). With the constraint, the same instantiation now
-  produces a single-line "the expression 'n >= 2 [with n = 0]' evaluated to 'false'"
-  diagnostic at the use site. The constraint is repeated on the eight forward declarations
-  in the specialization headers because all redeclarations of a constrained primary must
-  carry identical constraints; partial and explicit specializations still match correctly
-  (n ∈ {3, 4} and r ∈ {1, template parameter} satisfy the constraint at every active
-  instantiation).
-- **BREAKING**: CMake minimum requirement raised from 3.21 to 3.24. CMake 3.24 introduced `cmake -B build --fresh`, a one-command cache clobber + reconfigure that eliminates the ad-hoc `rm -rf build/CMakeCache.txt` pattern. All current target distros ship CMake >= 3.24 in their default repositories (Rocky Linux 9 AppStream = 3.26.5, Rocky Linux 10 AppStream = 3.30.5, Ubuntu 24.04 LTS = 3.28.x), so the bump imposes no new constraint on contributors. Sibling C++ libraries (`kdtree`, `mRMR`) receive the same bump in coordinated PRs.
-- **BREAKING**: Minimum C++ standard raised from C++14 to C++20. Sets `cxx_std_20` in `target_compile_features`. The bump enables the modernizations applied in this release (`std::bit_width`, `std::conditional_t` simplifications in graph-type dispatch, broader `if constexpr` dispatch where it improves clarity). Three internal enums (`vcp_3_r_1.hpp`, `vcp_3_1_1.hpp`, `vcp_4_1_1.hpp`) had cross-enum bit-shift arithmetic — `V1V2 + OUT` summing values from distinct enum types — which C++20 deprecated. The relevant pair-stride constants are now `static constexpr std::size_t` rather than enum members so one operand of every cross-axis sum is a plain integer; the directedness enums remain (they are used as the type of `next_union_element`'s return-pair second element). Sibling kdtree and mRMR remain at C++14 until their own next major releases.
-- **BREAKING**: License changed from GPL-3.0-or-later to BSD 3-Clause. Versions before 2.0.0 remain available under their original GPL-3.0-or-later terms; downstream users who received earlier releases retain their rights under that license. The relicensing aligns vcp with the academic-research convention used by the major scientific-computing libraries (NumPy, SciPy, scikit-learn, pandas) and broadens reuse for industry researchers without copyleft friction. The "no endorsement" clause additionally protects the author's name and affiliated institutions from being used to promote derivative works without permission.
-- The 16-line GPL-3.0 boilerplate at the top of every public header and tool source (22 files) is replaced by a two-line SPDX form: `// SPDX-License-Identifier: BSD-3-Clause` and `// Copyright (C) 2013-2026 Ryan N. Lichtenwalter`. The full BSD 3-Clause text remains in `LICENSE` at the repository root, which is the authoritative source. Copyright year extended from 2013 to 2013-2026 to reflect ongoing development. README License section, `CITATION.cff` `license:` field, and inline references all updated to match.
-- Documented thread-safety contract per `vcp<n, r, d>` specialization in README and in-header comments. `vcp<3, r, d>` is safe for shared-instance concurrent calls (no mutable class state); `vcp<4, r, d>` is not safe because of the `v3Vertices` scratch buffer held as a class member. The uniform "one `vcp` per thread" pattern is always safe and recommended as the default. Previously the contract was unwritten.
-- `regression/run.sh` now encodes expected divergence between the legacy and current builds for fixture classes where legacy has a known bug that has since been fixed:
-  - **Phase 3 (vcp_generate byte-diff)**: `(n = 4, r = 1, d = 1)` and any `r ≥ 2` run are marked as "legacy has a known-buggy regime," so a divergence reports PASS instead of FAIL. Matches are still PASS (fixture just didn't trigger the bug). Outside these regimes, divergence is still a regression.
-  - **Phase 4 (directed_to_undirected byte-diff)**: fixtures whose names don't contain `bidirectional` or `mutual` are marked as "legacy d2u has a bug on asymmetric edges" (legacy actually gets killed by the kernel on these). Divergence is expected; the mutual/bidirectional cases are the strict-match set.
-  - **Phase 6 (Bug-2 invariant validation)**: legacy is expected to fail (the fixtures exist precisely to demonstrate the pre-fix K4-bidirectional underflow); current is expected to pass. Previously legacy's failure was reported as a regression-suite failure, which masked actual regressions.
-  Full regression is now 165/165 PASS on the current branch.
+- `VCP_WARNING_FLAGS` expanded with `-Wconversion -Wsign-conversion -Wshadow -Wnull-dereference -Wdouble-promotion -Wimplicit-fallthrough` plus GCC-only `-Wlogical-op` and `-Wduplicated-cond`
+  - Mechanical fallout (explicit casts, parameter renames) fixed across nine headers; no semantics altered
+- `.gitea/workflows/ci.yml` invokes named CMake presets instead of inline flags, so CI reproduces a developer's local `cmake --preset=...` invocation byte-for-byte
+- `.gitignore` simplified: the `build-*/` glob is removed — presets place all per-config trees under the already-ignored `build/`
+- CI `build-and-test` matrix extended with Clang; both GCC and Clang now build everything and run the full ctest suite at Release and Debug
+- Test and benchmark targets now compile with the same warning flags as the CLI tools, via a new shared `VCP_WARNING_FLAGS` CMake variable
+- `std::make_pair(...)` replaced with the C++17 CTAD `std::pair{...}` form throughout headers, tools, and tests (~50 call sites)
+- All four graph foundation classes declare defaulted noexcept move constructor/assignment, so `std::vector<graph>` reallocations move instead of copying the heap CSR arrays
+- `[[nodiscard]]` added to every observer on the public API surface, including the nullable-iterator find-edge family
+- `noexcept` added to one-line accessors on the four graph foundation classes, `square_matrix::size`, and the new defaulted moves
+- Top-level `const` dropped from `generate_vector` return types (18 declaration/definition pairs), letting call sites move instead of copy the returned map
+- The primary `vcp<n, r, d>` template now carries `requires (n >= 2 && r >= 1)`, turning nonsense instantiations into a single-line diagnostic at the use site
+- **BREAKING**: CMake minimum requirement raised from 3.21 to 3.24; all current target distros ship >= 3.24 in their default repositories
+- **BREAKING**: Minimum C++ standard raised from C++14 to C++20
+- **BREAKING**: License changed from GPL-3.0-or-later to BSD 3-Clause
+  - Versions before 2.0.0 remain available under their original GPL-3.0-or-later terms
+- The 16-line GPL boilerplate in every public header and tool source (22 files) replaced with a two-line SPDX form; the full BSD 3-Clause text remains authoritative in `LICENSE`
+- Documented thread-safety contract per `vcp<n, r, d>` specialization in README and in-header comments ("one `vcp` per thread" is always safe and recommended)
+- `regression/run.sh` now encodes expected legacy-vs-current divergence for fixture classes where legacy has a known, since-fixed bug; full regression is 165/165 PASS
 - `regression/validate_bug2_invariants.py`: dropped a redundant `strict=False` on a `zip()` call (3.10+ default).
-- `tools/vcp_gen_er_fixture.cpp`: added explicit `ofstream.flush()` + `good()` check after both write loops, so a mid-write I/O failure (out-of-disk, quota, broken pipe) raises instead of silently leaving a truncated fixture file.
-- Public-header includes are now narrowed to what each header actually uses. The eight headers that previously included `<iostream>` either had no need for it (`vcp.hpp`, `vcp_dynamic_mapper.hpp` — include dropped) or only declared/defined `operator<<` and `operator>>` overloads (the four graph headers, `square_matrix.hpp`, `vcp_static_mapper.hpp` — replaced with the narrower `<istream>` and/or `<ostream>`). `<iostream>` pulls in `std::cin`/`std::cout`/`std::cerr` definitions and a global `static`-init sentinel (`std::ios_base::Init`) that none of these headers need; switching to the narrow forms removes that translation-unit weight from every consumer of the public API.
-- Renamed top-level `script/` directory to `scripts/` for plural consistency with `tools/` and the prevailing convention for directories holding multiple scripts. The two contents (`lpmade_to_vcp.pl`, `lpmade_to_vcp_mr.pl`) are utility format converters, not part of the library or CLI tool surface, so this is a repo-layout change only and does not affect any installed artifact.
-- Standardized include-guard convention to `VCP_<NAME>_HPP` across all 17 headers (16 public + `detail/dense_or_sparse_map.hpp`). Two headers (`graph.hpp`, `square_matrix.hpp`) had used a `_H` suffix; the remaining 15 had no suffix at all. The uniform `_HPP` form matches the convention used by sibling header-only libraries `kdtree` and `mRMR`, and aligns with the prevailing C++ open-source convention.
-- `std::make_unique<T[]>` replaces the explicit `std::unique_ptr<T[]>(new T[N])` form at every allocation site in the four graph foundation classes (`graph`, `directed_graph`, `multirelational_graph`, `multirelational_directed_graph` — default ctor, copy ctor, copy-assign, and the `operator>>` parse path) and at the `v3Vertices` scratch-buffer allocation in each `vcp<4, ., .>` specialization. There is no semantic change for the scratch buffers (one allocation per `vcp` instance, amortized over millions of `generate_vector` calls). On the graph parse path `make_unique<T[]>` value-initializes where `new T[N]` default-initialized; for these arrays every cell is fully overwritten in the same function before being read, so the initialization is wasted work — measured at well under 1% of the parse-time wall clock on a 10M-node 50M-edge fixture (regression Phase L is byte-identical). The byte-identical regression and full ctest pass demonstrate behavioral equivalence; the change removes every explicit `new`/`delete` from the public headers.
-- `vcp<4, 1, false>::generate_vector` hot path — replaced a chained-equality V3→V4 role re-encoding (two `it2->second == v1v2 + V*V3` equality tests per inner iteration) with the direct stride-based form `(it2->second - v1v2) << 1`. The two are exactly equivalent because `V1V4/V1V3 == V2V4/V2V3 == 2` — the per-slot stride for the `(r = 1, d = 0)` `connectivity_value` enum layout — so shifting the V1V3/V2V3 bits left by 1 lands them in V1V4/V2V4 slots for all three cases (V1V3-only, V2V3-only, both). Note the stride differs from `vcp_4_1_1.hpp:543`: the d=0 enum uses 1 bit per pair so the shift is 1, while the d=1 enum uses 2 bits per pair so the shift is 2. Benchmarked against the pre-perf baseline: **14–18% wall-clock improvement on `vcp_generate 4 1 0`** across `n ∈ {200, 500, 1000}` ER fixtures (5-run median), no measurable change on any other workload.
-- `VCP_SANITIZE` now enables AddressSanitizer **and** UndefinedBehaviorSanitizer (previously only ASan), applies to every built target (tools, tests, benchmarks — previously only CLI tools), and passes `-fno-sanitize-recover=all` so every sanitizer diagnostic is a hard error. The new CI `sanitize` job builds this configuration and runs the test suite on every PR.
+- `tools/vcp_gen_er_fixture.cpp`: flush-and-check after both write loops, so a mid-write I/O failure raises instead of silently leaving a truncated fixture
+- Public-header includes narrowed: `<iostream>` dropped or replaced with `<istream>`/`<ostream>` in the eight headers that over-included it
+- Renamed top-level `script/` directory to `scripts/` for plural consistency with `tools/`; repo-layout change only
+- Standardized include-guard convention to `VCP_<NAME>_HPP` across all 17 headers, matching sibling libraries `kdtree` and `mRMR`
+- `std::make_unique<T[]>` replaces the explicit `new T[N]` form at every owning-array allocation site, removing every explicit `new`/`delete` from the public headers
+- `vcp<4, 1, false>::generate_vector` hot path: stride-based V3→V4 re-encoding replaces two chained equality tests — a 14–18% wall-clock improvement on `vcp_generate 4 1 0`
+- `VCP_SANITIZE` now enables ASan and UBSan on every built target with `-fno-sanitize-recover=all`; the new CI `sanitize` job runs this configuration on every PR
 - **BREAKING**: Move headers from `inc/vcp/` to `include/vcp/` (use `#include <vcp/vcp.hpp>`)
 - **BREAKING**: Move CLI tool sources from `src/` to `tools/` following header-only library conventions
 - **BREAKING**: Minimum C++ standard raised from C++11 to C++14
@@ -216,79 +81,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Replace vendored TCLAP with CLI11 for command-line argument parsing
 - Rename `COPYING` to `LICENSE` (GPL-3.0 content unchanged)
 - Rename `CHANGES` to `CHANGELOG.md` with Keep-a-Changelog formatting
-- `vcp_static_mapper::operator<<` now uses `std::ranges::copy(c, out)` instead of `std::copy(c.begin(), c.end(), out)`. Three `std::max_element(c.begin(), c.end())` calls in `test/test_vcp_4_1_0.cpp` and `test/test_vcp_4_1_1.cpp` (six total) are correspondingly migrated to `std::ranges::max_element(c)`. Two `REQUIRE` lines in `test/test_square_matrix.cpp` that compared a fixed-size matrix cell against a `static_cast<int>(size_t expr)` are rewritten to land both sides into named `int` locals before the comparison so `modernize-use-integer-sign-comparison` does not fire through the cast. The `top_two_neighborhood_size_directed` helper added in this release is also restructured to count the out/in intersection in a single-loop-variable form so `bugprone-infinite-loop` no longer false-fires through the templated graph type. Aggregate effect: clang-tidy 20.x runs clean across the headers, tools, and tests with no behavior change.
+- Migrated `std::copy`/`std::max_element` call sites to `std::ranges` equivalents and restructured two tests so clang-tidy 20.x runs clean with no behavior change
 
 ### Removed
-- Redundant `using vertex_id_t = std::size_t; using edge_id_t = std::size_t;
-  using const_vertex_iterator = void *const *; using const_edge_iterator = void
-  *const *;` declarations from `directed_graph.hpp`,
-  `multirelational_graph.hpp`, and `multirelational_directed_graph.hpp`. All
-  three duplicated the same four namespace-scope `using` declarations that
-  `graph.hpp` already provides. They were defensive duplicates from the era
-  before C++11 nailed down two-phase template name lookup; modern compilers
-  do not need them. `directed_graph.hpp` now `#include`s `<vcp/graph.hpp>`
-  to inherit them; the multirelational headers already pulled `graph.hpp`
-  in transitively. `graph.hpp` becomes the single source of truth for these
-  fundamental aliases.
-- Dead template-metafunction primitives `vcp::TMP_power`, `vcp::TMP_min`, and `vcp::TMP_max` in
-  `vcp_dynamic_mapper.hpp`. These enum-trick metafunctions predated `constexpr` and were
-  unreferenced anywhere in the codebase; removed without replacement.
-- Redundant naked forward declarations of the free `vcp::edge` and `vcp::edge_value`
-  overloads in `vcp.hpp` (lines 117-133 prior to this change). The inline definitions
-  immediately following served as both declaration and definition for their callers in the
-  same translation unit; the leading forward decls were dead weight and a maintenance trap
-  (any out-of-line redefinition with the same signature would silently break the inline
-  contract).
+- Redundant duplicated `vertex_id_t`/`edge_id_t`/iterator `using` declarations from the three derived graph headers; `graph.hpp` is now their single source of truth
+- Dead template-metafunction primitives `vcp::TMP_power`, `vcp::TMP_min`, and `vcp::TMP_max` in `vcp_dynamic_mapper.hpp`; unreferenced, removed without replacement
+- Redundant naked forward declarations of the free `vcp::edge` and `vcp::edge_value` overloads in `vcp.hpp`
 - `build_local_gcc.sh` — obsolete gcc-4.8 bootstrap script from 2013
 - `AUTHORS` — redundant with license header and source-file copyright notices
 - Vendored `lib/boost_1_53_0/` (~23 MB, 2013 vintage)
 - Vendored `lib/tclap-1.2.1/`
-- `VCP_INSTRUMENT_K` build-time instrumentation hook from `vcp_4_r_0.hpp` and `vcp_4_r_1.hpp`, along with its consumer `benchmark/small_map_study/k_probe_tool.cpp`, the in-tree `benchmark/small_map_study/k_probe.hpp` header, and the `run_k_probe_sweep.sh` driver. The probe was a one-off harness that recorded per-call container cardinalities (`temp_edge_types`, `edge_types`, `counts`) to inform the `detail::dense_or_sparse_map` two-tier byte-budget decision; that decision shipped, the recorded cardinalities under `benchmark/small_map_study/results/` remain as the historical record, and the `#ifdef`-guarded include of a non-public header is no longer needed on the public surface. The CMake gate for the remaining `bench_container_mix` microbenchmark is renamed from `VCP_BUILD_K_PROBE` to `VCP_BUILD_SMALL_MAP_STUDY`.
+- `VCP_INSTRUMENT_K` instrumentation hook and its one-off k-probe harness; the recorded cardinality results remain under `benchmark/small_map_study/results/`
+  - CMake gate for the remaining microbenchmark renamed from `VCP_BUILD_K_PROBE` to `VCP_BUILD_SMALL_MAP_STUDY`
 
 ### Fixed
-- The compile-time `MAX_NEIGHBORS` cap (`-DVCP_MAX_NEIGHBORS=…`, default 16384) is removed. The four `vcp<4, r, d>` profilers now size the `v3Vertices` scratch buffer to the exact universal upper bound derived from the graph: top1 + top2 across vertices, where the per-vertex value is the neighborhood size for undirected graphs and the unique-neighbor count `|N_out(v) ∪ N_in(v)|` for directed graphs. The previous form had two failure modes the cap could not address simultaneously: low-traffic users wasted up to 16384 × ~80 bytes (≈ 1.3 MB) per profiler instance regardless of graph size, while high-traffic users with dense graphs got a heap buffer overflow under `NDEBUG` (the assert that guarded against this is compiled out in release builds, leaving the merge loop free to scribble past the buffer's end). The exact bound is computed once at vcp construction in O(V) for undirected and O(V + E) for directed; the directed two-finger merge over sorted out- and in-neighbor lists is the cost of using the tight bound instead of the loose `out_deg(v) + in_deg(v)`, which over-allocates by up to 2× on graphs with many mutual edges (e.g. undirected datasets re-encoded as directed). The construction-time scan is negligible compared to the subsequent VCP enumeration cost. New header `include/vcp/detail/v3_buffer_bound.hpp` houses the two helpers; `include/vcp/detail/dense_or_sparse_map.hpp` and the new helper are now both listed in `VCP_PUBLIC_HEADERS` so installs include them (the dense_or_sparse_map header was previously a transitive include of `vcp_4_r_*.hpp` but missing from the install set, a latent install bug). The four `assert(MAX_NEIGHBORS > …)` guards in the `generate_vector` hot paths are also removed; they protected against an over-allocation that no longer exists. README and the `k_probe.hpp` benchmark comment are updated accordingly.
-- `vcp_static_mapper` no longer uses `std::pow` for integer-exponent computations on the construction path. Five `std::pow(2, …)` and `std::pow(r_pset, …)` calls in `subgraph_count`, the constructor's `r_pset` and `value_matrix` cell builds, and `element_structure`'s `r_pset` are replaced with `std::size_t(1) << bits` shifts. `std::pow` is a `double`-domain operation; for the values exercised here (subgraph counts up to 2³⁶ for vcp(4, 1, 1) and 2¹⁰² for the (n=4, r=17, d=1) limit case the public API previously advertised), the round-trip through `double` cannot be guaranteed correct after some threshold and, like the matching `std::sqrt` defect in `square_matrix::size`, depends on the libm. Bit shifts compute the same values exactly, with no allocation, no FPU traffic, and at constant cost. `subgraph_count` additionally gains an explicit `bits >= std::numeric_limits<std::size_t>::digits` check that throws `std::length_error` with a descriptive message instead of silently producing an undefined-shift result; the previous form depended on the compiler's libm to detect overflow, which is not specified to occur. Includes `<limits>` and `<stdexcept>` are added; the file no longer transitively requires `<cmath>`. No behavior change for any (n, r, d) combination at which the table actually fits in `std::size_t`.
-- `square_matrix<T, n>::size()` and `square_matrix<T, 0>::size()` no longer recover the side length by `std::sqrt(data.size())`. The fixed-size primary template now returns the template parameter `n` directly via a `constexpr noexcept` inline definition; the dynamic specialization stores its side length in a new `n_` member set by the sized constructor, the converting constructor from a fixed-size matrix, `operator=` from a fixed-size matrix, and `resize`. The previous form was a textbook integer-from-floating-point hazard: for an n×n matrix with n²≥2²⁵, `double` cannot represent every integer exactly, and a slightly-low rounding gives `std::sqrt(n*n) → n−1`, after which `data[size() * row + column]` lands one row early on every access. C++ does not mandate a correctly-rounded `sqrt` for `double`, so the boundary depends on the compiler's libm. The hazard was latent because all current call sites instantiate at small `n` (≤ 4), but the fix removes the failure mode entirely, makes `size()` constant-time on both specializations, gives the fixed template a `constexpr` `size()`, and lets the public header drop its `<cmath>` include. No behavior change at the small `n` exercised by current code.
-- Removed redundant `typename` keyword preceding non-type template parameters in `vcp.hpp` (two `edge_value` overloads for multirelational graphs) and `square_matrix.hpp` (the dynamic-from-fixed converting constructor and assignment operator). `template <typename std::size_t r>` is well-formed but signals an incomplete refactoring — `typename` is a redundant qualifier on a non-dependent type that needed no disambiguation. Now `template <std::size_t r>`. No behavior change.
-- `directed_graph::out_edges_begin`, `out_edges_end`, `in_edges_begin`, and `in_edges_end` definitions now return `const_edge_iterator` to match their declarations. The four inline definitions in `directed_graph.hpp` returned `const_vertex_iterator`; the discrepancy compiled silently because both aliases resolve to `void *const *`. Type-name correction only — no behavior change. The fix removes a latent landmine: if those iterator aliases are ever differentiated for type safety, the four functions would have silently returned the wrong type without this fix.
-- `vcp<3, r, false>::generate_vector` (multirelational undirected) reads the correct edge value when constructing the `(v2, v3)` slot for v3 candidates exclusive to v2. The V2V3 main-merge branch in `vcp_3_r_0.hpp` (line 117) used `edge_value(v1_it)` where the logic required `edge_value(v2_it)` — the same family of copy-paste defect previously fixed in `vcp_4_r_0.hpp`. For r = 1 every edge value is 1 and the bug was masked; for r ≥ 2 every v3 candidate unique to v2's neighbor set received a wrong connectivity value, routing the induced subgraph to a wrong canonical VCP bucket. The directed analog (`vcp_3_r_1.hpp`) is unaffected because it threads edge values through a `next_union_element` helper. Added `test/test_vcp_3_r_0.cpp` with a Catch2 ground-truth test mirroring the pattern in `test_vcp_4_r_0.cpp`: it computes the expected canonical address via the dynamic mapper and asserts the enumerated subgraph lands there — a regression guard independent of any reference build. The existing Phase 3 legacy-vs-current byte diff missed this because both builds have carried the same defect since 2012.
-- Four latent clang-tidy errors and the CI gap that hid one of them. (a) `modernize-use-auto` on `vcp_4_1_0.hpp:240` and `vcp_4_1_1.hpp:617` — the `long long const V = static_cast<long long>(g.vertex_count())` expressions inside the debug-only `assert` blocks duplicated the type name across declaration and cast; switched to `auto const V = ...`. No runtime effect (NDEBUG build compiles these lines away). (b) `modernize-use-nullptr` on `multirelational_directed_graph.hpp:118` and `:151` — two `NULL`-initialized CSR edge-sentinel writes in the copy constructor and copy-assignment operator, both inside `<r>`-templated bodies. Replaced with `nullptr`. (c) `modernize-concat-nested-namespaces` on `include/vcp/detail/dense_or_sparse_map.hpp:100` — disabled the check project-wide in `.clang-tidy` rather than adopt C++17 `namespace A::B` syntax, since vcp 2.0.0 ships at C++14 for strict sibling alignment with kdtree and mRMR (the check only fires at C++17+, which GCC 14 defaults to even though the CMake requirement is `cxx_std_14`). Also fixed the CI `lint` invocation, which scanned `include/vcp/*.hpp tools/*.cpp test/*.cpp` but not `include/vcp/detail/*.hpp` — so a future detail/ header cannot hide a clang-tidy violation.
-- `detail::pair_hash` now uses the 64-bit Boost hash-combine constant `0x9e3779b97f4a7c15` on 64-bit platforms (selected via `if constexpr`), keeping the 32-bit form only on 32-bit `size_t`. The previous single 32-bit constant left the upper 32 bits of the second hash input unmixed on 64-bit builds — a collision risk that would have hit exactly the sparse tier (r > 10 directed, r > 20 undirected), where pair halves span beyond 32 bits.
-- `vcp<4, 1, false>::generate_vector` and `vcp<4, 1, true>::generate_vector` — added debug-only assertions guarding the unsigned-arithmetic tail that caused the K4-bidirectional underflow fixed on `fix/vcp-4-1-1-underflow`. The final `counts[element_address(v1v2)]` computation subtracts `unsigned long` quantities whose invariant is mathematical (positive terms dominate negative terms in correct code); any upstream miscounting silently wraps to ~2⁶⁴ garbage. The asserts cast each dangerous sub-expression to `long long` — including `(vertex_count - 2 - v3_count)` which can itself underflow if `v3_count > V − 2` — and check both non-negativity and a plausible upper bound. Release build compiles the guards away under `NDEBUG`; CI sanitize-build exercises them on every PR. Zero release-binary impact. Motivated by expert C++ review of Finding 11 of the October reviewer pass.
-- `graph::operator>>` and `directed_graph::operator>>` — replaced `atol(s2.c_str())` with `std::from_chars` for vertex-id parsing in both graph-istream operators. `atol` returns 0 on malformed input (silently), is locale-dependent, and overflowing the return `long` is undefined behavior. `std::from_chars` is locale-independent by contract, reports errors via a `std::errc` return field, and is specifically designed to be the fastest C++ integer-parsing primitive (typically 2–4× `strtol` on realistic workloads). Behavior preserved for historical callers: empty tokens (from trailing or doubled spaces) still yield 0, matching `atol("")`. Malformed non-empty tokens now throw `std::invalid_argument` instead of silently accepting 0.
-- Sentinel coupling in `vcp_4_1_1.hpp` and `vcp_4_r_1.hpp` merge loops. Both `next_union_element` overloads signaled exhaustion by returning `end2` (the last argument) as the iterator; callers then tested `min.first != v{1,2,3}_in_neighbors_end` to detect exhaustion, relying on the coincidence that `v*_in_neighbors_end` was the argument passed as `end2`. Any refactor of `next_union_element`'s parameter order or sentinel convention would silently break every loop — tests would still pass on small fixtures, with miscounts on asymmetric neighbor sizes. Fixes:
-  - `vcp_4_1_1.hpp` — extended `directedness_value` with an explicit `EMPTY = 4` sentinel (placed outside the OUT..BOTH range so the existing `min.second < 3` shorthand continues to exclude it correctly). `next_union_element` now returns `EMPTY` on exhaustion, and every loop condition reads `min.second != EMPTY` rather than an iterator coincidence.
-  - `vcp_4_r_1.hpp` — the return type's value field is a `std::pair<connectivity, connectivity>` rather than an enum, so the enum trick doesn't apply; instead introduced named `min{1,2,_}_exhausted_sentinel` aliases at each call site, aliased to the corresponding `v*_in_neighbors_end`, so the loop conditions now read `min.first != min_exhausted_sentinel` — a self-documenting contract check rather than an accidental iterator comparison. The exhaustion convention is documented in a comment block at `next_union_element`'s final else branch.
-  - No behavioral change; `ctest` and `regression/run.sh` show byte-identical output compared to the pre-fix state.
-- `vcp_dynamic_mapper<n, r, d>::canonical_subgraph_address` — the permuted-term inner loop iterated all off-diagonals, while the baseline `subgraph_address` iterated only the upper triangle for undirected (`d == false`). For undirected graphs `value_matrix` is symmetric, so when a caller populated both triangles of the connectivity matrix the permuted term double-counted each pair, always exceeded the baseline, and `std::min` always picked the baseline — making canonicalization a silent no-op and grouping isomorphic subgraphs into separate buckets. All current callers (`vcp.hpp:131` and `vcp_4_r_0.hpp:99-218`) populate upper-triangle only, so the bug was latent; any future caller that used a symmetric-matrix convention would have silently miscounted. Fixed by aligning the permuted loop's inner bound to the baseline's (`column(d ? 0 : row + 1)`). Output for every existing upper-triangle-only caller is unchanged. `test_vcp_dynamic_mapper.cpp` now verifies canonicalization works for both input conventions.
-- `vcp_dynamic_mapper<n, r, d>::element_structure` — two co-located defects in a public API surface with no internal callers. The function had never been instantiated, which is why neither bug surfaced before:
-  - **Slot shift (line 147)**: `address >>= r_pset` shifted by `2**r` bits per iteration, where `r_pset` was `1 << r`. Each connectivity slot occupies exactly `r` bits, so the correct shift is `>>= r`. For `r = 1` the old form shifted by 2 and lost every other bit; for `r = 2` it shifted by 4 and scrambled every 2-bit slot; for large `r` it shifted by `2**r` which exceeds the address bit-width, producing all-zero output (ill-formed under C++ shift rules).
-  - **Const-ref mutation (line 140)**: the parameter was declared `subgraph_address_type const &address` but the loop body executed `address >>= …`. This is ill-formed and would have refused to compile on any real instantiation. The function was declared, defined, and shipped for thirteen years without ever being instantiated. Fixed by taking a local copy of the parameter.
-  - Also replaced the `r_pset`-based mask expression with a descriptive `slot_mask` and left an in-place comment explaining the r-bit slot semantics.
-  - Added `test/test_vcp_dynamic_mapper.cpp` with eight Catch2 tests (34 assertions) covering `subgraph_count`, slot-aligned bit packing in `subgraph_address`, full round-trip of `subgraph_address` / `element_structure` across four (n, r, d) parameter combinations, and the v3/v4 isomorphism-collapse property of `canonical_subgraph_address`. Temporarily reverting either fix causes the test suite to fail to compile.
-- `multirelational_graph<r>::relation_count` and `multirelational_directed_graph<r>::relation_count` — two latent defects fixed alongside a new unit-test suite for both graph classes. Both methods are public API with zero internal callers, which is why the bugs went unnoticed:
-  - **Function-local `static` cached the first call's result across every instance of the same template instantiation.** Whichever graph happened to call `relation_count()` first imprinted its answer on every subsequent graph with the same `<r>`. Two graphs of the same template instantiation with different active-relation counts would disagree with their own data. Fix: compute per-call.
-  - **`std::max_element` on empty `edge_values` was UB.** A default-constructed or empty-input graph had `num_edges == 0` (or `num_out_edges == 0`), so the max-element range `[begin, begin)` was empty, and the following dereference of the returned end iterator read either uninitialized memory (for the 1-element default-ctor allocation) or past a 0-byte allocation (for an empty parse). Fix: guard on empty edges and return 0.
-  - Also replaced `std::ceil(std::log2(max + 1))` with a portable bit-counting loop that works uniformly across `std::size_t` (small r) and `boost::multiprecision::number` (r > 64-bit-word). The old form would not have compiled for multiprecision instantiations.
-  - Added `test/test_multirelational_graph.cpp` (8 tests, 26 assertions) and `test/test_multirelational_directed_graph.cpp` (8 tests, 33 assertions) covering construction, istream/ostream round-trip, neighbor iteration, copy semantics, and `relation_count` per-instance correctness on both an empty graph and a cross-instance cache-bleed scenario that reproduces the pre-fix failure mode directly.
-- `square_matrix<T, 0>` (dynamic) — two latent defects in the fixed-to-dynamic conversion paths that would have crashed any caller. Both paths were dead code (no caller in the current tree exercised them), but the bugs were real:
-  - **Copy constructor (line 110)**: `std::copy(&matrix(0, 0), &matrix(n - 1, n - 1), &data[0])` used the last-element address as the end iterator, dropping the `(n - 1, n - 1)` cell. The destination kept its value-initialized zero in that slot. Fixed to `&matrix(0, 0) + n * n`.
-  - **Copy assignment (line 118)**: `data.resize(n)` instead of `data.resize(n * n)` produced a heap buffer overflow on the subsequent `std::copy` of `n * n` elements. The assignment also used `this != &matrix` to compare pointers to distinct template instantiations, which is ill-formed; replaced with `static_cast<void const *>` on both sides. Fixed to `data.resize(n * n)`.
-  - Added `test/test_square_matrix.cpp` with ten Catch2 tests covering fixed and dynamic construction, resize semantics, corner-cell reachability, and both conversion paths. The copy-ctor test asserts `dst(n - 1, n - 1) == src(n - 1, n - 1)` (fails on the old form); the operator= test asserts post-assignment size and cell integrity (crashes with heap corruption on the old form).
-- `vcp<4, r, true>::generate_vector` (multirelational directed) — two co-located defects in `vcp_4_r_1.hpp`:
-  - **Slot addressing (line 337)**: the "v3 candidate promoted to v4, with v3-v4 edge" branch wrote the v4→v3 edge value into `it1->second(3, 3)` (the diagonal, which is unused by `canonical_subgraph_address`) instead of `(3, 2)`. The diagonal value was silently discarded and `(3, 2)` retained whatever value the previous `it2` iteration had left there (typically 0). Every v3-v4-connected subgraph in `it1->first < it2->first` was routed to a wrong canonical VCP bucket. Parallels to the correct `(3, 2)` writes at lines 305 and 359 confirm the defect is a copy-paste typo.
-  - **Post-enumeration self-correction (lines 379-398)**: the graph-wide `edge_types` map counts every vertex pair including v1v2, and when the current iteration's class matches v1v2's own directionality class the count must be reduced by 1 (v1v2 itself is not a v3v4 candidate). The existing code applied this correction only to the `(0, 0)` unconnected class via `!bool(c01 + c10)`. For every other class — asymmetric `(0, b)` and mutual `(a, b)` with both parts nonzero — the correction was missing, so when v1v2 had any directedness the corresponding bucket was inflated by 1 and the total counts overshot `C(V - 2, 2)`. The fix adds an explicit `else if` that subtracts 1 when `it->first == (min(c01, c10), max(c01, c10))` and the class is not `(0, 0)`. Verified against a mutual-v1v2 four-vertex r=2 fixture where the pre-fix sum was 2 and the post-fix sum is 1.
-  - Added `test/test_vcp_4_r_1.cpp` with two Catch2 ground-truth tests: one asserts the enumerated subgraph lands in the canonical bucket constructed with a nonzero `(3, 2)` slot; the other asserts the sum invariant `sum(counts) == C(V - 2, 2)` holds when v1v2 is mutual.
-- `vcp<4, r, false>::generate_vector` (multirelational undirected) now reads the correct edge value when constructing the `(v2, v3)` slot for v2-exclusive v3 candidates. Two copy-paste defects in `vcp_4_r_0.hpp` (the merge-loop v2-exclusive branch at line 109 and the v2-drain tail loop at line 143) used `edge_value(v1_neighbors_it)` where the logic required `edge_value(v2_neighbors_it)`. The drain-loop case additionally dereferenced `v1_neighbors_it` at its `end()` sentinel, producing UB before the sentinel-safe `multirelational_graph::edge_value` landed. The effect was that every v3 candidate unique to v2's neighbor set received a wrong connectivity value, routing the induced subgraph to a wrong canonical VCP bucket for all `r ≥ 2` undirected graphs. Added `test/test_vcp_4_r_0.cpp` with two Catch2 ground-truth tests that compute the expected canonical address via the same dynamic mapper and assert the enumerated subgraph lands there — a regression guard independent of any reference build. The existing Phase 3 legacy-vs-current byte diff missed this because both builds have carried the same defect since 2012.
-- Pad `dbug2_*` regression fixtures with trailing empty lines so the line-count-based graph parser reads the correct `num_vertices`. The previous form omitted rows for vertices with no out-edges, so vertex IDs referenced by earlier adjacency lines were past the end of the vertex array — undefined behavior at parse time (`std::bad_alloc` on legacy, `SIGSEGV` on current). The fix makes `validate_bug2_invariants.py` runnable on all six Bug-2 coverage fixtures and lets the current build PASS ground-truth invariant checks on every one of them.
-- `vcp<4, 1, true>::generate_vector` now produces correct output on inputs containing mutual edges or shared-neighbor structure. The directed 4-vertex specialization had three co-located defects in the post-enumeration accounting:
-  - **Counting (line 579)**: the asymmetric-v3v4 slot over-subtracted the v₁v₂ edge by 1 when v₁v₂ was mutual, causing unsigned underflow to 2⁶⁴−1. The original `static_cast<bool>(v1v2)` treated any v₁v₂ edge as asymmetric, but the v₁v₂ pair contributes to `amutualPairs` only when genuinely asymmetric. Fix: subtract 1 iff `v1v2` is OUT or IN.
-  - **Counting (line 581)**: the mutual-v3v4 slot was missing the symmetric correction, inflating the count by 1 when v₁v₂ was mutual. The v₁v₂ mutual edge lives in `mutualPairs` but is absent from the `connections − amutuals` observation term, so the correction belongs here. Fix: subtract 1 iff `v1v2` is BOTH.
-  - **Addressing (lines 538, 547)**: the re-encoding from V₁₃/V₂₃ (v₃ role) to V₁₄/V₂₄ (v₄ role) dropped the V₁₃ unit-conversion factor, inflating the V₁₄ slot value by V₁₃ = 4. In the worst case (both c₁₃ and c₂₃ = BOTH) the generated address reached 4239, overflowing the 4096-entry `element_address` static map (out-of-bounds read in `.rodata`, followed by a write to an arbitrary `counts[]` slot). Fix: exploit the stride equivalence V₁₄/V₁₃ = V₂₄/V₂₃ = 4 and compute `contrib = 4 * temp` directly; the explicit form is documented in-place for future-proofing against enum-layout changes.
-  - The three defects coincide on K₄-bidirectional, which is now the minimal regression fixture. Added a new Phase 6 to `regression/run.sh` (`validate_bug2_invariants.py`) that asserts conservation (`sum(counts) == C(V−2, 2)`), non-underflow (`max(counts) <= C(V−2, 2)`), and slot localization (`counts[expected_element] == 1`) across six new directed fixtures (`dbug2_*`) that partition the (v₁v₂ type × shared-v₃ pattern) trigger space. Phase 6 reports absolute correctness independent of the byte-level legacy-vs-current diff used elsewhere.
-- `multirelational_graph::edge_value` and `multirelational_directed_graph::edge_value` now return 0 (unconnected) when passed the `edges_end()` sentinel, matching the contract of the simple `graph` and `directed_graph` siblings. Callers in `vcp::edge_value()` pipe `edge()` results directly into `edge_value()` without a null check; the previous unconditional array lookup caused an out-of-bounds read on any multirelational graph with missing edges (e.g. paths).
-- `directed_to_undirected` no longer infinite-loops on directed graphs whose out-neighbor and in-neighbor sets differ. The two tail merge loops were missing their iterator advances. Also skip the output block for isolated vertices (empty neighbor list), whose `neighbors.end() - 1` formed a pointer before `begin()`.
-- `graph::operator<<`, `directed_graph::operator<<`, `multirelational_graph::operator<<`, and `multirelational_directed_graph::operator<<` no longer compute `neighbors_end(vIt) - 1` on an isolated vertex at the start of the shared edges array, which formed a pointer before the array base (undefined behavior per C++ [expr.add]/4, flagged by UBSan's pointer-overflow check). All four operators are rewritten using the separator-before-non-first idiom, producing byte-identical output on all non-pathological cases.
+- Removed the compile-time `MAX_NEIGHBORS` cap; `vcp<4, r, d>` now sizes the `v3Vertices` scratch buffer to an exact graph-derived bound, eliminating a heap overflow risk under `NDEBUG`
+  - `detail/dense_or_sparse_map.hpp` and the new `detail/v3_buffer_bound.hpp` are now in `VCP_PUBLIC_HEADERS`, fixing a latent install gap
+- `vcp_static_mapper` computes integer powers via bit shifts instead of `std::pow`, removing `double` round-trip inexactness; oversized shifts now throw `std::length_error`
+- `square_matrix::size()` no longer recovers the side length via `std::sqrt`, removing a latent off-by-one for n² ≥ 2²⁵ and making `size()` constant-time on both specializations
+- Removed redundant `typename` preceding non-type template parameters in `vcp.hpp` and `square_matrix.hpp`
+- `directed_graph` out/in edge-iterator definitions now return `const_edge_iterator` to match their declarations; both aliases resolve identically, so behavior is unchanged
+- `vcp<3, r, false>::generate_vector` reads the correct edge value for v3 candidates exclusive to v2; at r ≥ 2 the wrong value routed subgraphs to a wrong canonical bucket (present since 2012)
+- Four latent clang-tidy errors, and the CI `lint` gap that excluded `include/vcp/detail/*.hpp` from scanning
+- `detail::pair_hash` uses the 64-bit hash-combine constant on 64-bit platforms, closing a collision risk in the sparse tier
+- Debug-only assertions guard the unsigned-arithmetic tail of `vcp<4, 1, d>::generate_vector` against silent underflow; compiled away under `NDEBUG`, exercised by the CI sanitize build
+- Graph istream operators parse vertex ids with `std::from_chars` instead of `atol`; malformed non-empty tokens now throw `std::invalid_argument` instead of silently reading 0
+- Merge loops in `vcp_4_1_1.hpp` and `vcp_4_r_1.hpp` use explicit exhaustion sentinels instead of an iterator-argument coincidence; byte-identical output
+- `vcp_dynamic_mapper::canonical_subgraph_address` no longer double-counts pairs for undirected symmetric-matrix input, which made canonicalization a silent no-op (latent for current callers)
+- `vcp_dynamic_mapper::element_structure`: corrected the per-slot shift (`>>= r`, not `>>= r_pset`) and an ill-formed const-ref mutation; the function had never been instantiated
+- `multirelational_*_graph::relation_count`: removed a function-local `static` that bled the first call's result across instances, and guarded `std::max_element` against empty edges (UB)
+- `square_matrix<T, 0>` fixed-to-dynamic conversion paths: the copy constructor dropped the last cell and copy assignment under-sized its resize (heap overflow); both latent until now
+- `vcp<4, r, true>::generate_vector`: a wrong-slot diagonal write misrouted v3-v4-connected subgraphs, and a missing post-enumeration self-correction inflated counts for connected v1v2
+- `vcp<4, r, false>::generate_vector` reads the correct edge value for v2-exclusive v3 candidates; two copy-paste defects misrouted subgraphs for all r ≥ 2 undirected graphs (present since 2012)
+- Pad `dbug2_*` regression fixtures with trailing empty lines so the line-count-based graph parser reads the correct `num_vertices`
+- `vcp<4, 1, true>::generate_vector` produces correct output on mutual-edge and shared-neighbor inputs, fixing three co-located counting/addressing defects
+  - New regression Phase 6 (`validate_bug2_invariants.py`) asserts ground-truth invariants across six new `dbug2_*` fixtures
+- `multirelational_*_graph::edge_value` returns 0 for the `edges_end()` sentinel instead of an out-of-bounds read, matching the simple graph siblings' contract
+- `directed_to_undirected` no longer infinite-loops when out- and in-neighbor sets differ, and skips isolated vertices whose output block formed a pointer before `begin()`
+- Graph `operator<<` overloads no longer form a pre-`begin()` pointer on isolated vertices (UB); rewritten with the separator-before-non-first idiom, byte-identical output
 
 ## [1.0.0] - 2012-05-01
 
