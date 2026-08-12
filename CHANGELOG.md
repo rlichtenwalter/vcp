@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 - `check-json` pre-commit hook validating `CMakePresets.json` and any future JSON files at commit time
 - Gitea Actions workflow mirroring Gitea releases to GitHub, closing the push mirror's release-metadata gap
-  - Idempotent, with a `workflow_dispatch` path (`tag` input) for manual backfill
+  - Idempotent, with a `workflow_dispatch` path (`tag` input) for manual runs against any existing release; backfill-style GitHub bodies get an original-release-date annotation
 - Ignore `.env` and `.env.*` in `.gitignore` while still permitting a committed `.env.example` template
 - Doxygen docstrings on all 17 public headers, covering every public class, typedef, constructor, and method
   - Thread-safety contracts and per-specialization element-count invariants called out explicitly
@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `test/test_dense_or_sparse_map.cpp` covering tier selection, insert-or-zero semantics, and both pair-keyed paths
 - `benchmark/small_map_study/` — opt-in (`-DVCP_BUILD_SMALL_MAP_STUDY=ON`) microbenchmark harness and recorded results behind the container-strategy decision
 - `benchmark/counts_map_study/` — opt-in (`-DVCP_BUILD_COUNTS_BENCH=ON`) study of six candidate `counts`-map replacements; findings in `benchmark/counts_map_study/results/summary.md`
+  - The `counts` refactor itself is deferred pending an end-to-end profile; `counts` stays `std::map` in this release
 - `vcp_gen_er_fixture` CLI tool (`tools/vcp_gen_er_fixture.cpp`) generating sparse Erdős–Rényi fixtures (~6 s at n=10M vs ~1-2 min for the earlier Python prototype)
 - Large-tier benchmark workload (`./benchmark/run.sh --large`) on a 10M-node sparse ER graph, exercising the four unirelational VCP procedures
 - `regression/run.sh` Phase L runs legacy-vs-current byte-diff checks on the benchmark's 10M-node fixture, with legacy's known `vcp 4 1 1` divergence encoded as expected
@@ -70,7 +71,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `tools/vcp_gen_er_fixture.cpp`: flush-and-check after both write loops, so a mid-write I/O failure raises instead of silently leaving a truncated fixture
 - Public-header includes narrowed: `<iostream>` dropped or replaced with `<istream>`/`<ostream>` in the eight headers that over-included it
 - Renamed top-level `script/` directory to `scripts/` for plural consistency with `tools/`; repo-layout change only
-- Standardized include-guard convention to `VCP_<NAME>_HPP` across all 17 headers, matching sibling libraries `kdtree` and `mRMR`
+- Standardized include-guard convention to `VCP_<NAME>_HPP` across all 17 headers (16 public + `detail/dense_or_sparse_map.hpp`), matching sibling libraries `kdtree` and `mRMR`
 - `std::make_unique<T[]>` replaces the explicit `new T[N]` form at every owning-array allocation site, removing every explicit `new`/`delete` from the public headers
 - `vcp<4, 1, false>::generate_vector` hot path: stride-based V3→V4 re-encoding replaces two chained equality tests — a 14–18% wall-clock improvement on `vcp_generate 4 1 0`
 - `VCP_SANITIZE` now enables ASan and UBSan on every built target with `-fno-sanitize-recover=all`; the new CI `sanitize` job runs this configuration on every PR
@@ -81,7 +82,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Replace vendored TCLAP with CLI11 for command-line argument parsing
 - Rename `COPYING` to `LICENSE` (GPL-3.0 content unchanged)
 - Rename `CHANGES` to `CHANGELOG.md` with Keep-a-Changelog formatting
-- Migrated `std::copy`/`std::max_element` call sites to `std::ranges` equivalents and restructured two tests so clang-tidy 20.x runs clean with no behavior change
+- Migrated `std::copy`/`std::max_element` call sites to `std::ranges` equivalents, restructuring two `REQUIRE` sites and one test helper, so clang-tidy 20.x runs clean with no behavior change
 
 ### Removed
 - Redundant duplicated `vertex_id_t`/`edge_id_t`/iterator `using` declarations from the three derived graph headers; `graph.hpp` is now their single source of truth
@@ -95,7 +96,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - CMake gate for the remaining microbenchmark renamed from `VCP_BUILD_K_PROBE` to `VCP_BUILD_SMALL_MAP_STUDY`
 
 ### Fixed
-- Removed the compile-time `MAX_NEIGHBORS` cap; `vcp<4, r, d>` now sizes the `v3Vertices` scratch buffer to an exact graph-derived bound, eliminating a heap overflow risk under `NDEBUG`
+- Removed the `MAX_NEIGHBORS` cap (`-DVCP_MAX_NEIGHBORS`, default 16384); `vcp<4, r, d>` now sizes `v3Vertices` to an exact graph-derived bound, fixing a heap-overflow risk under `NDEBUG`
   - `detail/dense_or_sparse_map.hpp` and the new `detail/v3_buffer_bound.hpp` are now in `VCP_PUBLIC_HEADERS`, fixing a latent install gap
 - `vcp_static_mapper` computes integer powers via bit shifts instead of `std::pow`, removing `double` round-trip inexactness; oversized shifts now throw `std::length_error`
 - `square_matrix::size()` no longer recovers the side length via `std::sqrt`, removing a latent off-by-one for n² ≥ 2²⁵ and making `size()` constant-time on both specializations
@@ -106,10 +107,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `detail::pair_hash` uses the 64-bit hash-combine constant on 64-bit platforms, closing a collision risk in the sparse tier
 - Debug-only assertions guard the unsigned-arithmetic tail of `vcp<4, 1, d>::generate_vector` against silent underflow; compiled away under `NDEBUG`, exercised by the CI sanitize build
 - Graph istream operators parse vertex ids with `std::from_chars` instead of `atol`; malformed non-empty tokens now throw `std::invalid_argument` instead of silently reading 0
-- Merge loops in `vcp_4_1_1.hpp` and `vcp_4_r_1.hpp` use explicit exhaustion sentinels instead of an iterator-argument coincidence; byte-identical output
+- `vcp_4_1_1.hpp` merge loops use an explicit out-of-band exhaustion sentinel; `vcp_4_r_1.hpp` gains named sentinel aliases over its iterator-end convention; byte-identical output
 - `vcp_dynamic_mapper::canonical_subgraph_address` no longer double-counts pairs for undirected symmetric-matrix input, which made canonicalization a silent no-op (latent for current callers)
 - `vcp_dynamic_mapper::element_structure`: corrected the per-slot shift (`>>= r`, not `>>= r_pset`) and an ill-formed const-ref mutation; the function had never been instantiated
 - `multirelational_*_graph::relation_count`: removed a function-local `static` that bled the first call's result across instances, and guarded `std::max_element` against empty edges (UB)
+  - Relation-id bit width now computed by bit-counting instead of `std::ceil(std::log2(max + 1))`, which would not compile for multiprecision (large-r) instantiations
 - `square_matrix<T, 0>` fixed-to-dynamic conversion paths: the copy constructor dropped the last cell and copy assignment under-sized its resize (heap overflow); both latent until now
 - `vcp<4, r, true>::generate_vector`: a wrong-slot diagonal write misrouted v3-v4-connected subgraphs, and a missing post-enumeration self-correction inflated counts for connected v1v2
 - `vcp<4, r, false>::generate_vector` reads the correct edge value for v2-exclusive v3 candidates; two copy-paste defects misrouted subgraphs for all r ≥ 2 undirected graphs (present since 2012)
