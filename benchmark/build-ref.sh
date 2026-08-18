@@ -16,7 +16,7 @@
 # <slug> is sanitized to [A-Za-z0-9_.-] to play nicely with filesystem paths.
 #
 # Examples:
-#   ./build-ref.sh develop
+#   ./build-ref.sh main
 #   ./build-ref.sh ba1592d legacy
 #   ./build-ref.sh feature/benchmark-suite
 
