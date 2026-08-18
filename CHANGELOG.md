@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - Pre-commit `mixed-line-ending` hook now normalises every commit to LF via `args: [--fix=lf]`
+- Remove retired develop branch from CI triggers, branch guards, and benchmark scripts
+  - Fixes `benchmark/run.sh`'s default `--refs` value, which pointed at a ref that no longer resolves
 
 ## [2.0.0] - 2026-05-05
 

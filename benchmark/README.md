@@ -26,7 +26,7 @@ are reproducible run-to-run and machine-to-machine.
 ./benchmark/run.sh
 ```
 
-This builds the legacy commit (`ba1592d`) and the tip of `develop` in
+This builds the legacy commit (`ba1592d`) and the tip of `main` in
 isolated git worktrees, runs every workload 3 times against each, and
 writes a markdown comparison table to
 `benchmark/results/<timestamp>/comparison.md` (with a
@@ -35,7 +35,7 @@ writes a markdown comparison table to
 ### Arbitrary refs
 
 ```bash
-./benchmark/run.sh --refs develop,feature/foo,v1.0.0
+./benchmark/run.sh --refs main,feature/foo,v1.0.0
 ./benchmark/run.sh --refs HEAD~5 --no-legacy
 ```
 
@@ -47,7 +47,7 @@ the main working tree is untouched.
 
 | Option | Default | Meaning |
 |--------|---------|---------|
-| `--refs REV[,REV...]` | `develop` | Comma-separated list of revspecs |
+| `--refs REV[,REV...]` | `main` | Comma-separated list of revspecs |
 | `--runs N` | `3` | Repetitions per workload; median reported |
 | `--timeout SEC` | `300` (`1800` with `--large`) | Per-invocation wall-clock limit |
 | `--skip-build` | off | Reuse existing `bin/<slug>/` (fastest for iteration) |

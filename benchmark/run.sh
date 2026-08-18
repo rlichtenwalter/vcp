@@ -20,7 +20,7 @@
 #            [--skip-build] [--no-legacy] [--large]
 #
 # Defaults:
-#   --refs "develop"      one ref (legacy added implicitly unless --no-legacy)
+#   --refs "main"         one ref (legacy added implicitly unless --no-legacy)
 #   --runs 3              repetitions per workload per ref
 #   --timeout 300         per-invocation wall-clock seconds (1800 with --large)
 #
@@ -54,7 +54,7 @@ FIXTURES_DIR="$SCRIPT_DIR/fixtures"
 RESULTS_ROOT="$SCRIPT_DIR/results"
 
 # --- Arg parsing ---
-REFS_ARG="develop"
+REFS_ARG="main"
 RUNS=3
 TIMEOUT=""
 SKIP_BUILD=0
