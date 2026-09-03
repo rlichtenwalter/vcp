@@ -1,0 +1,33 @@
+{
+  // markdownlint ships a `style/prettier` preset that disables every rule
+  // prettier already owns, but `extends` resolves as a FILESYSTEM PATH
+  // relative to this config -- not as a node module. A bare
+  // "extends": "markdownlint/style/prettier" is silently inert. The preset
+  // is therefore inlined below; markdownlint is left owning semantics only.
+  "line-length": false,
+  "emphasis-style": false,
+  "strong-style": false,
+  "hr-style": false,
+  "code-block-style": false,
+  "ul-style": false,
+  "ol-prefix": false,
+  "list-indent": false,
+  "ul-indent": false,
+  "list-marker-space": false,
+  "blanks-around-headings": false,
+  "blanks-around-lists": false,
+  "blanks-around-fences": false,
+  "blanks-around-tables": false,
+  "no-multiple-blanks": false,
+  "trailing-spaces": false,
+  "no-missing-space-atx": false,
+  "no-multiple-space-atx": false,
+  "no-missing-space-closed-atx": false,
+  "no-multiple-space-closed-atx": false,
+  "no-trailing-spaces": false,
+  "table-pipe-style": false,
+  "table-column-style": false,
+  "first-line-heading": false,
+  "no-inline-html": false,
+  "no-duplicate-heading": { "siblings_only": true }
+}

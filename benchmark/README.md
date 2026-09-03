@@ -2,21 +2,19 @@
 
 Two complementary layers:
 
-1. **Cross-ref tool-level benchmark** (`run.sh`, `build-ref.sh`)
-   — times the CLI tools end-to-end against one or more git revisions
-   and emits a markdown comparison table. Works on both the 2012 legacy
-   Makefile build and the modern CMake build, so you can compare the
-   original GitHub state against any branch.
+1. **Cross-ref tool-level benchmark** (`run.sh`, `build-ref.sh`) — times the CLI
+   tools end-to-end against one or more git revisions and emits a markdown
+   comparison table. Works on both the 2012 legacy Makefile build and the modern
+   CMake build, so you can compare the original GitHub state against any branch.
 
-2. **Catch2 library-level micro-benchmarks** (`bench_vcp.cpp`)
-   — fine-grained timing of individual library operations (graph parse,
-   VCP enumeration for a given template specialization). Only builds
-   against the modernized CMake setup, so it cannot measure the 2012
-   code. Useful for tracking the effect of a single change within the
-   current branch.
+2. **Catch2 library-level micro-benchmarks** (`bench_vcp.cpp`) — fine-grained
+   timing of individual library operations (graph parse, VCP enumeration for a
+   given template specialization). Only builds against the modernized CMake
+   setup, so it cannot measure the 2012 code. Useful for tracking the effect of
+   a single change within the current branch.
 
-Both are driven by deterministic, seeded random fixtures so measurements
-are reproducible run-to-run and machine-to-machine.
+Both are driven by deterministic, seeded random fixtures so measurements are
+reproducible run-to-run and machine-to-machine.
 
 ## Cross-ref tool-level benchmark
 
@@ -26,10 +24,9 @@ are reproducible run-to-run and machine-to-machine.
 ./benchmark/run.sh
 ```
 
-This builds the legacy commit (`ba1592d`) and the tip of `main` in
-isolated git worktrees, runs every workload 3 times against each, and
-writes a markdown comparison table to
-`benchmark/results/<timestamp>/comparison.md` (with a
+This builds the legacy commit (`ba1592d`) and the tip of `main` in isolated git
+worktrees, runs every workload 3 times against each, and writes a markdown
+comparison table to `benchmark/results/<timestamp>/comparison.md` (with a
 `benchmark/results/latest` symlink).
 
 ### Arbitrary refs
@@ -39,93 +36,89 @@ writes a markdown comparison table to
 ./benchmark/run.sh --refs HEAD~5 --no-legacy
 ```
 
-The legacy commit is prepended automatically unless `--no-legacy` is
-passed. Each ref is built at the specified commit in its own worktree;
-the main working tree is untouched.
+The legacy commit is prepended automatically unless `--no-legacy` is passed.
+Each ref is built at the specified commit in its own worktree; the main working
+tree is untouched.
 
 ### Options
 
-| Option | Default | Meaning |
-|--------|---------|---------|
-| `--refs REV[,REV...]` | `main` | Comma-separated list of revspecs |
-| `--runs N` | `3` | Repetitions per workload; median reported |
-| `--timeout SEC` | `300` (`1800` with `--large`) | Per-invocation wall-clock limit |
-| `--skip-build` | off | Reuse existing `bin/<slug>/` (fastest for iteration) |
-| `--no-legacy` | off | Do not prepend the legacy baseline |
-| `--large` | off | Append the 10M-node large tier (see below) |
+| Option                | Default                       | Meaning                                              |
+| --------------------- | ----------------------------- | ---------------------------------------------------- |
+| `--refs REV[,REV...]` | `main`                        | Comma-separated list of revspecs                     |
+| `--runs N`            | `3`                           | Repetitions per workload; median reported            |
+| `--timeout SEC`       | `300` (`1800` with `--large`) | Per-invocation wall-clock limit                      |
+| `--skip-build`        | off                           | Reuse existing `bin/<slug>/` (fastest for iteration) |
+| `--no-legacy`         | off                           | Do not prepend the legacy baseline                   |
+| `--large`             | off                           | Append the 10M-node large tier (see below)           |
 
 ### Workloads
 
 The suite exercises every major code path:
 
-| Workload | Purpose |
-|----------|---------|
+| Workload                             | Purpose                                                        |
+| ------------------------------------ | -------------------------------------------------------------- |
 | `vcp_gen {3,4} 1 0 n={200,500,1000}` | Undirected unirelational (specializations `vcp_{3,4}_1_0.hpp`) |
-| `vcp_gen {3,4} 1 1 n={200,500}` | Directed unirelational (specializations `vcp_{3,4}_1_1.hpp`) |
-| `vcp_gen {3,4} 2 0 n={100,200}` | Multirelational r=2 (generic `vcp_{3,4}_r_0.hpp` paths) |
-| `directed_to_undirected [-b]` | CSR neighbor-set intersection/union |
-| `ell_2_pairs` | 2-hop pair enumeration |
+| `vcp_gen {3,4} 1 1 n={200,500}`      | Directed unirelational (specializations `vcp_{3,4}_1_1.hpp`)   |
+| `vcp_gen {3,4} 2 0 n={100,200}`      | Multirelational r=2 (generic `vcp_{3,4}_r_0.hpp` paths)        |
+| `directed_to_undirected [-b]`        | CSR neighbor-set intersection/union                            |
+| `ell_2_pairs`                        | 2-hop pair enumeration                                         |
 
-Fixtures are sized so each `vcp_generate(4,r,d)` all-pairs workload runs
-~0.2 s to ~5 s on a modern CPU; smaller than that and timing is noise,
-larger and a full sweep takes too long. The full default sweep
-(2 refs × 17 workloads × 3 runs) completes in roughly 2-3 minutes.
+Fixtures are sized so each `vcp_generate(4,r,d)` all-pairs workload runs ~0.2 s
+to ~5 s on a modern CPU; smaller than that and timing is noise, larger and a
+full sweep takes too long. The full default sweep (2 refs × 17 workloads × 3
+runs) completes in roughly 2-3 minutes.
 
 ### Legacy-compatibility constraints
 
-Fixtures are curated to avoid the known legacy bugs so the same inputs
-run on both the 2012 and modern code:
+Fixtures are curated to avoid the known legacy bugs so the same inputs run on
+both the 2012 and modern code:
 
-- **Directed fixtures** used with `directed_to_undirected` are
-  bidirectionally symmetric. Legacy infinite-loops when out- and
-  in-neighbor sets diverge (fixed on modern; see CHANGELOG under
-  `[Unreleased]`).
-- **Multirelational fixtures** are dense enough that the enumeration is
-  unlikely to probe a missing edge. Legacy's unguarded `edge_value()`
-  reads out of bounds on missing edges (also fixed on modern).
-- Any workload that nevertheless fails on a ref is reported as
-  `CRASH-<rc>` / `TIMEOUT` / `MISSING` rather than aborting the sweep.
+- **Directed fixtures** used with `directed_to_undirected` are bidirectionally
+  symmetric. Legacy infinite-loops when out- and in-neighbor sets diverge (fixed
+  on modern; see CHANGELOG under `[Unreleased]`).
+- **Multirelational fixtures** are dense enough that the enumeration is unlikely
+  to probe a missing edge. Legacy's unguarded `edge_value()` reads out of bounds
+  on missing edges (also fixed on modern).
+- Any workload that nevertheless fails on a ref is reported as `CRASH-<rc>` /
+  `TIMEOUT` / `MISSING` rather than aborting the sweep.
 
-The `vcp_generate 4 1 1` workload currently crashes on both legacy and
-modern because of a separate pre-existing underflow in
-`vcp_4_1_1.hpp` that still needs to be fixed (requires re-deriving
-formulas from Lichtenwalter & Chawla 2014). Once that lands, the
-benchmark will pick it up automatically.
+The `vcp_generate 4 1 1` workload currently crashes on both legacy and modern
+because of a separate pre-existing underflow in `vcp_4_1_1.hpp` that still needs
+to be fixed (requires re-deriving formulas from Lichtenwalter & Chawla 2014).
+Once that lands, the benchmark will pick it up automatically.
 
 ### Large tier (opt-in via `--large`)
 
-For measuring the effect of scaling-sensitive optimizations the small
-default fixtures are too quick: a 0.2-5 s workload on a 1-2k-node graph
-is dominated by graph parse and process startup, and two inner-loop
-implementations that differ by 2x at scale may not show any detectable
-difference there. `--large` appends four extra workloads on a single
-10M-node sparse ER graph (avg degree 5, ~25M undirected edges):
+For measuring the effect of scaling-sensitive optimizations the small default
+fixtures are too quick: a 0.2-5 s workload on a 1-2k-node graph is dominated by
+graph parse and process startup, and two inner-loop implementations that differ
+by 2x at scale may not show any detectable difference there. `--large` appends
+four extra workloads on a single 10M-node sparse ER graph (avg degree 5, ~25M
+undirected edges):
 
-| Workload | Graph | Pairs |
-|----------|-------|-------|
-| `vcp_gen 3 1 0 n=10M` | Undirected | 100k sampled |
-| `vcp_gen 4 1 0 n=10M` | Undirected | 100k sampled |
+| Workload              | Graph                | Pairs        |
+| --------------------- | -------------------- | ------------ |
+| `vcp_gen 3 1 0 n=10M` | Undirected           | 100k sampled |
+| `vcp_gen 4 1 0 n=10M` | Undirected           | 100k sampled |
 | `vcp_gen 3 1 1 n=10M` | Directed (symmetric) | 100k sampled |
 | `vcp_gen 4 1 1 n=10M` | Directed (symmetric) | 100k sampled |
 
 The pairs file is a 100,000-entry uniform sample rather than all pairs
-(`C(10M, 2)` is ~5×10¹³ entries - infeasible, and on the ER inner loop
-nearly all of them would do zero work anyway).
+(`C(10M, 2)` is ~5×10¹³ entries - infeasible, and on the ER inner loop nearly
+all of them would do zero work anyway).
 
-The fixture is generated by the `vcp_gen_er_fixture` C++ tool (built
-alongside the other CLI tools). It uses a two-pass CSR-style sampling
-procedure that completes in ~6 seconds for n=10M on modern hardware
-and the directed-bidirectional file is **hardlinked** from the
-undirected one (byte-identical representation), so total on-disk size
-is ~400 MB rather than ~800 MB. Subsequent `run.sh --large` invocations
-reuse the fixture idempotently.
+The fixture is generated by the `vcp_gen_er_fixture` C++ tool (built alongside
+the other CLI tools). It uses a two-pass CSR-style sampling procedure that
+completes in ~6 seconds for n=10M on modern hardware and the
+directed-bidirectional file is **hardlinked** from the undirected one
+(byte-identical representation), so total on-disk size is ~400 MB rather than
+~800 MB. Subsequent `run.sh --large` invocations reuse the fixture idempotently.
 
-The timeout default rises to 1800 s so a slow legacy run still
-finishes instead of being censored. Legacy may nevertheless `CRASH` or
-`TIMEOUT` at this scale; that is reported in the table, not fatal.
+The timeout default rises to 1800 s so a slow legacy run still finishes instead
+of being censored. Legacy may nevertheless `CRASH` or `TIMEOUT` at this scale;
+that is reported in the table, not fatal.
 
-To regenerate or generate with different parameters, invoke the tool
-directly:
+To regenerate or generate with different parameters, invoke the tool directly:
 
 ```bash
 ./build/vcp_gen_er_fixture -n 10000000 -d 5 -s 42 -k 100000 \
@@ -135,9 +128,9 @@ directly:
 ### Raw data
 
 Every run's elapsed-seconds value is written to
-`results/<timestamp>/raw/<workload>__<slug>.log`, one line per run. Use
-these for computing variance, plotting distributions, or debugging a
-noisy cell in the summary table.
+`results/<timestamp>/raw/<workload>__<slug>.log`, one line per run. Use these
+for computing variance, plotting distributions, or debugging a noisy cell in the
+summary table.
 
 ## Catch2 library-level micro-benchmarks
 
@@ -164,27 +157,26 @@ Run:
 ./build/benchmark/bench_vcp "[!benchmark]" --benchmark-samples 50
 ```
 
-These benchmarks use Catch2's built-in `BENCHMARK_ADVANCED` /
-`Chronometer` infrastructure (same pattern as the kdtree and mRMR
-sibling libraries) and are compiled at `-O3 -DNDEBUG` regardless of the
-parent CMake build type. They are **not** registered with ctest, so
-`ctest` and `make test` skip them.
+These benchmarks use Catch2's built-in `BENCHMARK_ADVANCED` / `Chronometer`
+infrastructure (same pattern as the kdtree and mRMR sibling libraries) and are
+compiled at `-O3 -DNDEBUG` regardless of the parent CMake build type. They are
+**not** registered with ctest, so `ctest` and `make test` skip them.
 
 Available categories (tags):
 
-| Tag | Covers |
-|-----|--------|
-| `[io]` | `graph` parse/serialize |
-| `[vcp-3-1-0]` | `vcp<3,1,false>` all-pairs |
-| `[vcp-4-1-0]` | `vcp<4,1,false>` all-pairs |
-| `[vcp-3-1-1]` | `vcp<3,1,true>` all-pairs |
-| `[vcp-4-1-1]` | `vcp<4,1,true>` all-pairs |
+| Tag           | Covers                           |
+| ------------- | -------------------------------- |
+| `[io]`        | `graph` parse/serialize          |
+| `[vcp-3-1-0]` | `vcp<3,1,false>` all-pairs       |
+| `[vcp-4-1-0]` | `vcp<4,1,false>` all-pairs       |
+| `[vcp-3-1-1]` | `vcp<3,1,true>` all-pairs        |
+| `[vcp-4-1-1]` | `vcp<4,1,true>` all-pairs        |
 | `[vcp-3-2-0]` | `vcp<3,2,false>` multirelational |
 | `[vcp-4-2-0]` | `vcp<4,2,false>` multirelational |
 
 ## Files
 
-```
+```text
 benchmark/
 ├── README.md               # this file
 ├── bench_vcp.cpp           # Catch2 micro-benchmarks
