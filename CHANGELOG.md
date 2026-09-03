@@ -14,6 +14,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Remove retired develop branch from CI triggers, branch guards, and benchmark scripts
   - Fixes `benchmark/run.sh`'s default `--refs` value, which pointed at a ref that no longer resolves
 
+### Fixed
+
+- Restore the six `style/prettier` rules the inlined preset had dropped (`code-fence-style`, `heading-start-left`, `heading-style`, `no-blanks-blockquote`, `no-hard-tabs`, `no-multiple-space-blockquote`), and drop `trailing-spaces`, which is not a rule name and so disabled nothing
+
 ## [2.0.0] - 2026-05-05
 
 ### Added
