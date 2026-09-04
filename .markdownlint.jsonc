@@ -47,8 +47,8 @@
   "table-column-style": false,
 
   // Deliberate semantics, not formatting:
-  "first-line-heading": false,   // YAML frontmatter precedes the h1
-  "no-inline-html": false,       // <details>, <br>, <img> are used on purpose
+  "first-line-heading": false, // YAML frontmatter precedes the h1
+  "no-inline-html": false, // <details>, <br>, <img> are used on purpose
   "no-duplicate-heading": { "siblings_only": true },
 
   // MD036 cannot tell a heading from a label. Measured over the eight repos
