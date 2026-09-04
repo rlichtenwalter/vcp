@@ -15,6 +15,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   - Fixes `benchmark/run.sh`'s default `--refs` value, which pointed at a ref that no longer resolves
 - Collapse the padded comment alignment in `.markdownlint.jsonc` so it matches the fleet canon and survives `biome format`; no rule behaviour changes
 
+### Removed
+
+- Remove the unused `.kacl.yml`: nothing invoked kacl, and its structural rules are stricter than the Keep a Changelog spec states
+
 ### Fixed
 
 - Restore the six `style/prettier` rules the inlined preset had dropped (`code-fence-style`, `heading-start-left`, `heading-style`, `no-blanks-blockquote`, `no-hard-tabs`, `no-multiple-space-blockquote`), and drop `trailing-spaces`, which is not a rule name and so disabled nothing
