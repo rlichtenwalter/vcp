@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Pre-commit `mixed-line-ending` hook now normalises every commit to LF via `args: [--fix=lf]`
 - Remove retired develop branch from CI triggers, branch guards, and benchmark scripts
   - Fixes `benchmark/run.sh`'s default `--refs` value, which pointed at a ref that no longer resolves
+- Collapse the padded comment alignment in `.markdownlint.jsonc` so it matches the fleet canon and survives `biome format`; no rule behaviour changes
 
 ### Fixed
 
