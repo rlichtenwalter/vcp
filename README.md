@@ -37,8 +37,9 @@ space exceeds 64 bits). On Debian/Ubuntu:
 sudo apt-get install libboost-dev
 ```
 
-The bundled `CMakePresets.json` needs CMake ≥ 3.25. `cmake --workflow --preset ci`
-configures, builds and tests the release build in one command.
+The bundled `CMakePresets.json` needs CMake ≥ 3.25.
+`cmake --workflow --preset ci` configures, builds and tests the release build in
+one command.
 
 Configure and build:
 
