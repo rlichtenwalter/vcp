@@ -188,5 +188,7 @@ No changes yet.
 - Static and dynamic subgraph-to-element mappers
 - CLI tools: `vcp_generate`, `vcp_map`, `directed_to_undirected`, `ell_2_pairs`
 
-[Unreleased]: https://git.lichtenwalter.site/rlichten/vcp/compare/v2.0.0...main
+[Unreleased]: https://git.lichtenwalter.site/rlichten/vcp/compare/v2.2.0...main
+[2.2.0]: https://git.lichtenwalter.site/rlichten/vcp/compare/v2.1.0...v2.2.0
+[2.1.0]: https://git.lichtenwalter.site/rlichten/vcp/compare/v2.0.0...v2.1.0
 [2.0.0]: https://git.lichtenwalter.site/rlichten/vcp/releases/tag/v2.0.0
