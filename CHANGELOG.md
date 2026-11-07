@@ -8,6 +8,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 No changes yet.
 
+## [2.3.0] - 2026-11-07
+
+### Added
+
+- CI exercises the plain build, install and find_package() flow on CMake 3.24.0.
+
+### Changed
+
+- Add a `ci` CMake workflow preset; presets now need CMake 3.25.
+- Bump actions/checkout to v7
+- Bump pre-commit hook clang-format to v23
+- Bump pre-commit hook markdownlint-cli2 to v0.24.0
+- Bump pre-commit hook pre-commit-hooks to v6
+- Bump pre-commit hooks to their latest revisions
+- Install CI tools from PyPI directly; link changelog to GitHub
+- Pin actions/checkout to a commit sha
+- Switch the changelog to towncrier fragments
+
+### Fixed
+
+- Refresh the CHANGELOG version comparison links
+
 ## [2.2.0] - 2026-09-08
 
 ### Added
@@ -188,7 +210,8 @@ No changes yet.
 - Static and dynamic subgraph-to-element mappers
 - CLI tools: `vcp_generate`, `vcp_map`, `directed_to_undirected`, `ell_2_pairs`
 
-[Unreleased]: https://github.com/rlichtenwalter/vcp/compare/v2.2.0...main
+[Unreleased]: https://github.com/rlichtenwalter/vcp/compare/v2.3.0...main
+[2.3.0]: https://github.com/rlichtenwalter/vcp/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/rlichtenwalter/vcp/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/rlichtenwalter/vcp/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/rlichtenwalter/vcp/releases/tag/v2.0.0
