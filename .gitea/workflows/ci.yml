@@ -12,9 +12,13 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Jobs that need cmake, clang, lld or Boost run on the `cpp` runner label,
+# which maps to the cpp runner image (ci-runner-image 3.0.0 moved cmake
+# out of the base image). Nothing is installed from a distro mirror at
+# job time.
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest
+    runs-on: cpp
     strategy:
       fail-fast: false
       matrix:
@@ -37,11 +41,6 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - name: Install Boost headers, Clang, and lld
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libboost-dev clang lld
-
       - name: Configure
         run: cmake --preset=${{ matrix.preset }}
 
@@ -52,9 +51,10 @@ jobs:
         run: ctest --preset=${{ matrix.preset }}
 
   cmake-min:
-    # Keeps cmake_minimum_required honest. Every other job uses the runner's
-    # CMake and the presets, which need CMake 3.25 (the developer interface),
-    # so none of them can notice the consumer floor creeping upward. This job
+    # Keeps cmake_minimum_required honest. Every other job uses the cpp
+    # runner image's CMake and the presets, which need CMake 3.25 (the
+    # developer interface), so none of them can notice the consumer floor
+    # creeping upward. This job
     # runs the plain consumer commands -- no presets -- on the oldest CMake the
     # project declares support for: configure, build, test, install, and a
     # find_package() consumer against the installed tree.
@@ -62,16 +62,11 @@ jobs:
     # CMAKE_MIN is the exact version tested. Raising the floor in
     # CMakeLists.txt means raising it here; the first step fails if they
     # disagree.
-    runs-on: ubuntu-latest
+    runs-on: cpp
     env:
       CMAKE_MIN: "3.24.0"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-      - name: Install Boost headers
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libboost-dev
 
       - name: Install the minimum CMake from the packages cache
         run: |
@@ -126,7 +121,7 @@ jobs:
           SKIP: no-commit-to-branch
 
   lint:
-    runs-on: ubuntu-latest
+    runs-on: cpp
     # CC/CXX pinned to clang so the generated compile_commands.json does
     # not include GCC-only flags (-Wlogical-op, -Wduplicated-cond) that
     # clang-tidy cannot parse — the GCC-gated genexes in
@@ -137,11 +132,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - name: Install Boost headers, clang, and clang-tidy
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libboost-dev clang
-          pip install clang-tidy==20.1.0
+      - name: Install clang-tidy
+        run: pip install clang-tidy==20.1.0
 
       - name: Configure (for compile_commands.json)
         run: cmake --preset=release
@@ -155,14 +147,9 @@ jobs:
     # test code fails the PR. Halt-on-error is inherited from the
     # CMake-side -fno-sanitize-recover=all, but we also set the runtime
     # envs belt-and-braces in case the flag is ever changed.
-    runs-on: ubuntu-latest
+    runs-on: cpp
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-      - name: Install Boost headers
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libboost-dev
 
       - name: Configure (Debug + sanitizers)
         run: cmake --preset=sanitize
