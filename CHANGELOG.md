@@ -8,6 +8,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 No changes yet.
 
+## [2.3.1] - 2026-11-20
+
+### Changed
+
+- Bump clang-format pre-commit hook 23.1.3 → 23.1.5
+- Bump pre-commit hooks: prettier 3.9.10 → 3.10.1, markdownlint-cli2 0.24.0 → 0.24.1
+- Download the CI gitleaks release from github.com with its pinned sha256 verified, as a public mirror carries no lab package routing.
+- Run the cmake, clang, lld and Boost CI jobs on the cpp runner label (the ci-runner-image-cpp image) instead of installing distro packages at job time.
+- Stop Prettier from rewrapping changelog fragments
+
 ## [2.3.0] - 2026-11-07
 
 ### Added
@@ -210,7 +220,8 @@ No changes yet.
 - Static and dynamic subgraph-to-element mappers
 - CLI tools: `vcp_generate`, `vcp_map`, `directed_to_undirected`, `ell_2_pairs`
 
-[Unreleased]: https://github.com/rlichtenwalter/vcp/compare/v2.3.0...main
+[Unreleased]: https://github.com/rlichtenwalter/vcp/compare/v2.3.1...main
+[2.3.1]: https://github.com/rlichtenwalter/vcp/compare/v2.3.0...v2.3.1
 [2.3.0]: https://github.com/rlichtenwalter/vcp/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/rlichtenwalter/vcp/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/rlichtenwalter/vcp/compare/v2.0.0...v2.1.0
